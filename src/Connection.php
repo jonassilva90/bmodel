@@ -7,6 +7,7 @@ class Connection {
     static $timeZone = 'America/Sao_Paulo';
     static $charset = 'UTF8';
     static $modelPath;
+    static $namespaceModel = 'Model';
     /**
      *
      * @param string $dbname Nome do banco de dados
@@ -101,5 +102,141 @@ class Connection {
     public static function setModelPath ($path)
     {
         self::$modelPath = $path;
+    }
+
+    /**
+     * Traz o caminho dos models
+     *
+     * @param String $table Nome da tabela no formato PascalCase ou snake_case
+     * Se $table for null, retorna somente a pasta dos models
+     * Se não for null, retorna o caminho do modelo da tabela
+     * Se não encontrar o arquivo retorna FALSE
+     *
+     * @return String|Boolean False de não encontrar caminho
+     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
+     * @version 1.0
+     */
+    public static function getModelPath ($table = null)
+    {
+        if (is_null(self::$modelPath)) {
+            throw new \Exception("ModelPath undefined", 1);
+        }
+
+        if (is_null($table)) {
+            return self::$modelPath;
+        }
+        $modelName = Commons::pascalCase($table);
+        $modelPath = self::$modelPath . "/" . $modelName.".php";
+        $modelPath = str_replace('\\', "/", $modelPath);
+
+        if (!is_file($modelPath)) {
+            return false;
+        }
+        return $modelPath;
+    }
+
+    /**
+     * Traz o caminho dos tables
+     *
+     * @param String $table Nome da tabela no formato PascalCase ou snake_case
+     * Se $table for null, retorna somente a pasta dos models
+     * Se não for null, retorna o caminho do modelo da tabela
+     * Se não encontrar o arquivo retorna FALSE
+     *
+     * @return String|Boolean False de não encontrar caminho
+     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
+     * @version 1.0
+     */
+    public static function getTablePath ($table = null)
+    {
+        if (is_null(self::$modelPath)) {
+            throw new \Exception("ModelPath undefined", 1);
+        }
+
+        if (is_null($table)) {
+            return self::$modelPath;
+        }
+        $modelName = Commons::pascalCase($table);
+        $modelPath = self::$modelPath . "/" . $modelName."Table.php";
+        $modelPath = str_replace('\\', "/", $modelPath);
+
+        if (!is_file($modelPath)) {
+            return false;
+        }
+        return $modelPath;
+    }
+
+    /**
+     * New Table object
+     *
+     * @param String $table nome da tabela
+     *
+     * @return Table|boolean
+     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
+     * @version 1.0
+     */
+    public static function getTable ($table = null)
+    {
+        $tablePath = self::getTablePath($table);
+        $modelName = Commons::pascalCase($table)."Table";
+        $classTable = "\\".str_replace('/', "\\", self::$namespaceModel."/".$modelName);
+
+        if (!is_file($tablePath)) {
+            return false;
+        }
+
+        require_once($modelPath);
+
+        return new $classTable();
+    }
+
+    /**
+     * Traz model da tabela
+     *
+     * @param String $table
+     *
+     * @return void
+     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
+     * @version 1.0
+     */
+    public static function getModel ($table)
+    {
+        $modelPath = self::getModelPath($table);
+        $modelName = Commons::pascalCase($table);
+        $classModel = "\\".str_replace('/', "\\", self::$namespaceModel."/".$modelName);
+
+        if (!is_file($modelPath)) {
+            return false;
+        }
+
+        require_once($modelPath);
+
+        $model =  new $classModel();
+        $model->setTableName($table);
+        $model->reviewFields();
+        return $model;
+    }
+
+    /**
+     * Traz model da tabela (retorna o namespace\model)
+     *
+     * @param String $table
+     *
+     * @return void
+     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
+     * @version 1.0
+     */
+    public static function getRequireModel ($table)
+    {
+        $modelPath = self::getModelPath($table);
+        $modelName = Commons::pascalCase($table);
+        $classModel = "\\".str_replace('/', "\\", self::$namespaceModel."/".$modelName);
+
+        if (!is_file($modelPath)) {
+            return false;
+        }
+
+        require_once($modelPath);
+        return $classModel;
     }
 }

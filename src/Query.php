@@ -81,4 +81,21 @@ class Query {
         return $query;
     }
 
+    /**
+     * Pegar obj Table
+     *
+     * @param String $table Nome da tabela no formato PascalCase ou snake_case
+     * @param String $alias Alias da tabela
+     *
+     * @return void
+     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
+     * @version 1.0
+     */
+    static function getTable ($table, $alias = null)
+    {
+        if (is_null($mod)) $alias = Commons::snake_case($table);
+        if (is_null($alias)) $alias = Commons::snake_case($table);
+
+    }
+
 }

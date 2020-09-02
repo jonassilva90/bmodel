@@ -7,6 +7,7 @@ function splitStringCases ($val) {
     if (substr($val, 0, 1) == '_') $val = substr($val, 1);
     return explode('_', $val);
 }
+
 function camelCase ($val) {
     $val = splitStringCases($val);
 
