@@ -285,12 +285,33 @@ class QueryBuilder {
 
     public function get ()
     {
-        // return $this->exec();
+        if (is_null($this->data['select']) || empty($this->data['select'])) {
+            $fields = "*";
+        } elseif (is_string($this->data['select'])) {
+            $fields = $this->data['select'];
+        } else {
+            $fields = "";
+            $sep = '';
+            foreach ($this->data['select'] as $campo) {
+                $fields .= $sep . $campo;
+                $sep = ',';
+            }
+        }
+        $this->querySql = "SELECT {$fields} FROM `{$this->table}` WHERE ".$this->getWhere();
+        return $this->exec();
     }
 
     public function getAll ($type = 0)
     {
+        $res = $this->get();
+        if (!$res || $res->rowCount() == 0) return false;
 
+        $model = Connection::getRequireModel();
+        if (!$model) {
+            $model = "\\Bmodel\\Record";
+        }
+
+        return $res->fetchAll(\PDO::FETCH_CLASS, $model);
     }
 
     public function exec ()

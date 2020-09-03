@@ -107,6 +107,11 @@ class Table {
         return $table;
     }
 
+    public static function create ()
+    {
+        return Connection::getModel(self::$tableName);
+    }
+
     public function getBuild ()
     {
         if(is_null($this->queryBuild)) {
@@ -122,62 +127,74 @@ class Table {
 
     public function select ($fields = null)
     {
+        $this->getBuild();
+        $this->queryBuild->select($fields);
 
     }
 
     public function innerJoin ($table, $on, $name)
     {
-
+        $this->getBuild();
+        $this->queryBuild->innerJoin($table, $on, $name);
     }
 
     public function leftJoin ($table, $on, $name)
     {
-
+        $this->getBuild();
+        $this->queryBuild->leftJoin($table, $on, $name);
     }
 
     public function rightJoin ($table, $on, $name)
     {
-
+        $this->getBuild();
+        $this->queryBuild->rightJoin($table, $on, $name);
     }
 
     public function where ($where, $params = [])
     {
+        $this->getBuild();
+        $this->queryBuild->rightJoin($where, $params);
 
     }
 
     public function andWhere ($where, $params = [])
     {
-
+        $this->getBuild();
+        $this->queryBuild->andWhere($where, $params);
     }
 
-    public function orderBy ($order) {
-
+    public function orderBy ($order)
+    {
+        $this->getBuild();
+        $this->queryBuild->orderBy($order);
     }
 
-    public function start ($start) {
-
+    public function start ($start)
+    {
+        $this->getBuild();
+        $this->queryBuild->start($start);
     }
 
     public function limit ($limit)
     {
-
+        $this->getBuild();
+        $this->queryBuild->limit($limit);
     }
 
     public function insert ($values)
     {
-
+        $this->getBuild()->insert($values);
     }
 
     public function update ($values, $id = null)
     {
-
+        $this->getBuild()->update($values, $id);
     }
 
     public function delete ()
     {
         return $this->getBuild()->delete();
     }
-
 
     /**
      * Traz um registro por id
@@ -205,7 +222,7 @@ class Table {
      */
     public function findBy ($params)
     {
-
+        return $this->getBuild()->findBy($params);
     }
 
     /**
@@ -227,11 +244,11 @@ class Table {
 
     public function get ()
     {
-
+        return $this->getBuild()->get();
     }
 
     public function getAll ($type = 0)
     {
-
+        return $this->getBuild()->getAll($type);
     }
 }
