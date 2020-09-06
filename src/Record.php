@@ -46,7 +46,7 @@ class Record {
 
     public function __get ($name)
     {
-        if (array_key_exists($name, $this->_data)) {
+        if (!array_key_exists($name, $this->_data)) {
             throw new \Exception("Campo '{$name}' não existe na tabela '$this->_table}'");
         }
         return $this->_data[$name];
@@ -89,8 +89,8 @@ class Record {
         return array_values($this->_data);
     }
 
-    public function toJSON ()
+    public function toJSON ($typeJSON = 0)
     {
-        return json_encode($this->_data);
+        return json_encode($this->_data, $typeJSON);
     }
 }

@@ -4,6 +4,7 @@ namespace Bmodel;
 class Connection {
     static $connections = [];
     static $cfgConnections = [];
+    static $tables = [];
     static $timeZone = 'America/Sao_Paulo';
     static $charset = 'UTF8';
     static $modelPath;
@@ -96,6 +97,28 @@ class Connection {
 
         return self::$connections[$connectionsId];
     }
+
+
+    public static function isTable($table,$connectionsId = null)
+    {
+        if (is_null($connectionsId)) {
+            $con = 0;
+        }
+        if (isset(static::$tables[$con])) {
+            if (in_array($table, static::$tables[$con])) {
+                return true;
+            }
+        }
+
+        $pdo = Connection::connect($connectionsId);
+        $result = $pdo->query("SHOW TABLES");
+        static::$tables[$con] = [];
+        while($row = $result->fetch()) {
+            static::$tables[$con][] = $row[0];
+        }
+        return in_array($table, static::$tables[$con]);
+    }
+
     /**
      * Define Caminho dos arquivos model
      */
@@ -159,10 +182,10 @@ class Connection {
         $modelName = Commons::pascalCase($table);
         $modelPath = self::$modelPath . "/" . $modelName."Table.php";
         $modelPath = str_replace('\\', "/", $modelPath);
-
+        /*
         if (!is_file($modelPath)) {
             return false;
-        }
+        }*/
         return $modelPath;
     }
 
@@ -210,8 +233,7 @@ class Connection {
         }
 
         require_once($modelPath);
-
-        $model =  new $classModel();
+        $model =  new $classModel($table);
         $model->setTableName($table);
         $model->reviewFields();
         return $model;

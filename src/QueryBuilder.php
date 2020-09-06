@@ -6,7 +6,7 @@ class QueryBuilder {
 
     public function __construct () {
         $this->data = [
-            'tableName' => null,
+            'table' => null,
             'select' => null,
             'join' => null,
             'where' => null,
@@ -23,7 +23,7 @@ class QueryBuilder {
     }
     public function __get ($name)
     {
-        if (array_key_exists($name, $this->data)) {
+        if (!array_key_exists($name, $this->data)) {
             throw new \Exception("Parametro '{$name}' não existe ou não configurado", 1);
         }
         return $this->data[$name];
@@ -40,7 +40,7 @@ class QueryBuilder {
     }
     public function setTableName ($table)
     {
-        $this->data['tableName'] = Commons::snakeCase($table);
+        $this->data['table'] = Commons::snakeCase($table);
     }
 
     public function setConnectionId ($connectionId = null) {
@@ -95,7 +95,7 @@ class QueryBuilder {
         if (!isset($this->data['where'])) {
             $this->data['where'] = $where;
         } else {
-            $this->data['where'][] = ' AND '.$where;
+            $this->data['where'] .= ' AND '.$where;
         }
         if (!isset($this->data['params'])) {
             $this->data['params'] = [];
@@ -239,7 +239,7 @@ class QueryBuilder {
         } else {
             $i = 0;
             $where = [];
-            foreach ($values as $name => $value) {
+            foreach ($params as $name => $value) {
                 $bindData[':p_'.$i] = $value;
                 $where[] = "`$name` = :p_".$i;
                 $i++;
@@ -258,12 +258,12 @@ class QueryBuilder {
 
         if (!$res || $res->rowCount() == 0) return false;
 
-        $model = Connection::getRequireModel();
+        $model = Connection::getRequireModel($this->table);
         if (!$model) {
             $model = "\\Bmodel\\Record";
         }
-
-        return $res->fetch(\PDO::FETCH_CLASS, $model);
+        $res->setFetchMode(\PDO::FETCH_CLASS|\PDO::FETCH_PROPS_LATE, $model);
+        return $res->fetch();
     }
 
     /**
@@ -285,12 +285,45 @@ class QueryBuilder {
 
     public function get ()
     {
-        // return $this->exec();
+        if (is_null($this->data['select']) || empty($this->data['select'])) {
+            $fields = "*";
+        } elseif (is_string($this->data['select'])) {
+            $fields = $this->data['select'];
+        } else {
+            $fields = "";
+            $sep = '';
+            foreach ($this->data['select'] as $campo) {
+                $fields .= $sep . $campo;
+                $sep = ',';
+            }
+        }
+        $this->querySql = "SELECT {$fields} FROM `{$this->table}` WHERE ".$this->getWhere();
+
+        if (!is_null($this->order)) {
+            $this->querySql .= " ORDER BY ".$this->order;
+        }
+        if (!is_null($this->limit)) {
+            if (!is_null($this->start)) {
+                $this->querySql .= " LIMIT ".$this->start.",".$this->limit;
+            } else {
+                $this->querySql .= " LIMIT ".$this->limit;
+            }
+        }
+        return $this->exec();
     }
 
     public function getAll ($type = 0)
     {
+        $res = $this->get();
+        if (!$res || $res->rowCount() == 0) return false;
 
+        $model = Connection::getRequireModel($this->table);
+        if (!$model) {
+            $model = "\\Bmodel\\Record";
+        }
+
+        $res->setFetchMode(\PDO::FETCH_CLASS|\PDO::FETCH_PROPS_LATE, $model);
+        return new ResultsQuery($res->fetchAll(), $this->querySql, $this->data['params']);// return $res->fetchAll(\PDO::FETCH_CLASS, $model);
     }
 
     public function exec ()

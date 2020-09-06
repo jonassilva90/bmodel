@@ -4,6 +4,7 @@ namespace Bmodel;
 use Bmodel\Connection;
 
 class Query {
+    static $printQuery = false;
     static $queryString = '';
     /**
      * Begin transaction
@@ -57,7 +58,10 @@ class Query {
      */
     static public function query($sql,$bindData = null,$connectionsId = null)
     {
-        $pdo = static::connect($connectionsId);
+        if (Query::$printQuery) {
+            echo "SQL: ".$sql."<br />\r\n";
+        }
+        $pdo = Connection::connect($connectionsId);
         if(is_null($bindData) || empty($bindData)){
             self::$queryString = $sql;
             if(!$query = $pdo->query($sql)){
@@ -93,8 +97,13 @@ class Query {
      */
     static function getTable ($table, $alias = null)
     {
-        if (is_null($mod)) $alias = Commons::snake_case($table);
-        if (is_null($alias)) $alias = Commons::snake_case($table);
+        // if (is_null($alias)) $alias = Commons::snake_case($table);
+        $objTable = Connection::getTable($table);
+        if (!$objTable) {
+            return Table::createPseudo($table);
+        }
+
+        return $objTable;
 
     }
 
