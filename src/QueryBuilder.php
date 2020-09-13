@@ -116,7 +116,8 @@ class QueryBuilder {
         $this->data['limit'] = $limit;
     }
 
-    private function valuesToParams ($values) {
+    private function valuesToParams ($values)
+    {
         $params = [];
         $i = 0;
         foreach ($values as $name => $value) {
@@ -125,6 +126,17 @@ class QueryBuilder {
         }
 
         return $params;
+    }
+
+    public function count ()
+    {
+        $querySql = "SELECT count(id) FROM `{$this->table}` WHERE ".$this->getWhere();
+        $result = Query::query($querySql, $this->data['params'], $this->data['connectionId']);
+
+        if (!$result) return false;
+
+        list ($count) = $result->fetch(\PDO::FETCH_NUM);
+        return $count;
     }
 
     /**
@@ -150,7 +162,7 @@ class QueryBuilder {
 
         $this->data['params'] = $values;
 
-        $this->querySql = "INSERT INTO `{$this->table}` ({$keys}) VALUES ({$keysParams})";
+        $this->querySql = "INSERT INTO `{$this->table}` (".implode(",", $keys).") VALUES (".implode(",", $keysParams).")";
         $this->exec();
         $pdo = Connection::connect($this->data['connectionId']);
         return ((!$pdo)? false : $pdo->lastInsertId($name));
@@ -182,7 +194,12 @@ class QueryBuilder {
         }
         $this->data['params'][] = $params;
 
+        if (!is_null($id)) {
+            $this->where('id = '.intval($id), $params);
+        }
+
         $this->querySql = "UPDATE `{$this->table}` SET ".implode(", ", $valores). " WHERE ".$this->getWhere();
+
         return (!$this->exec())? false : true;
     }
 
@@ -195,7 +212,7 @@ class QueryBuilder {
      */
     public function delete ()
     {
-        $this->querySql = "DELETE FORM `{$this->table}` WHERE ".$this->getWhere();
+        $this->querySql = "DELETE FROM `{$this->table}` WHERE ".$this->getWhere();
         return (!$this->exec())? false : true;
     }
 
@@ -277,10 +294,8 @@ class QueryBuilder {
      */
     public function findDelete ($id)
     {
-        $obj = $this->find($id);
-        if (!$obj) return false;
-
-        return $obj->delete();
+        $this->querySql = "DELETE FROM `{$this->table}` WHERE id = {$id}";
+        return (!$this->exec())? false : true;
     }
 
     public function get ()

@@ -25,9 +25,9 @@ class Record {
     public function reviewFields ()
     {
         $data = $this->_data;
-        $fields = Query::getTable($tableName)->getFieldsFromDB();
+        $fields = Query::getTable($this->_table)->getFieldsFromDB();
         foreach ($fields as $field => $objField) {
-            if (!array_key_exists($field, $data)) {
+            if (is_null($data) || !array_key_exists($field, $data)) {
                 $data[$field] = $objField->getDefault();
             }
         }
@@ -52,6 +52,10 @@ class Record {
         return $this->_data[$name];
     }
 
+    public function getFields () {
+        return $this->_data;
+    }
+
     public function setTableName ($table)
     {
         $this->_table = $table;
@@ -65,10 +69,20 @@ class Record {
                 function ($k) { return $k != 'id';},
                 ARRAY_FILTER_USE_KEY
             );
-            return Query::getTable($this->_table)->insert($dados);
+            $result = Query::getTable($this->_table)->insert($dados);
+            if ($result != false) {
+                $this->_data['id'] = $result;
+                $result = true;
+            }
         } else {
-            return Query::getTable($this->_table)->update($this->_paramsSet, $this->_data['id']);
+            $result = Query::getTable($this->_table)->update($this->_paramsSet, $this->_data['id']);
         }
+
+        // Refresh data
+        $find = Query::getTable($this->_table)->find($this->_data['id']);
+        $this->_data = $find->toArray();
+
+        return $result;
     }
 
     public function delete ()

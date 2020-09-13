@@ -127,7 +127,11 @@ class Table {
 
     public static function create ()
     {
-        return Connection::getModel(self::$tableName);
+        $model = Connection::getModel(self::$tableName);
+        if (!$model) {
+            $model = Record::createPseudo(self::$tableName);
+        }
+        return $model;
     }
 
     public function getBuild ()
@@ -209,10 +213,14 @@ class Table {
         return $this;
     }
 
+    public function count ()
+    {
+        return $this->getBuild()->count();
+    }
+
     public function insert ($values)
     {
-        $this->getBuild()->insert($values);
-        return $this;
+        return $this->getBuild()->insert($values);
     }
 
     public function update ($values, $id = null)
@@ -265,10 +273,7 @@ class Table {
      */
     public function findDelete ($id)
     {
-        $obj = $this->find($id);
-        if (!$obj) return false;
-
-        return $obj->delete();
+        return $this->getBuild()->findDelete($id);
     }
 
     public function get ()
