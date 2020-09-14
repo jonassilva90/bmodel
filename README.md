@@ -9,6 +9,24 @@ php composer require jonassilva/bmodel
 
 ## Configuração inicial - (Conexão com banco)
 
+```php
+<?php // Arquivo config.php
+
+use Bmodel\Connection;
+
+// Definir conexao com banco de dados
+Connection::setConnection(
+  'banco',   // Database
+  null,           // Conexao ID
+  'localhost',    // Hostname
+  NULL,           // Port
+  'usuario', // Username
+  'senhaMuitoDificio'      // password
+);
+
+Connection::setModelPath('Model'); // pasta
+```
+
 ## Exemplos de uso
 
 ### Trazer um registro(como objeto)
