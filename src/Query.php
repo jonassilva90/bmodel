@@ -1,11 +1,13 @@
 <?php
+
 namespace Bmodel;
 
 use Bmodel\Connection;
 
-class Query {
-    static $printQuery = false;
-    static $queryString = '';
+class Query
+{
+    public static $printQuery = false;
+    public static $queryString = '';
     /**
      * Begin transaction
      *
@@ -15,7 +17,7 @@ class Query {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    static public function beginTransaction($connectionsId = null)
+    public static function beginTransaction($connectionsId = null)
     {
         $pdo = Connection::connect($connectionsId);
         return $pdo->beginTransaction();
@@ -29,7 +31,7 @@ class Query {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    static public function commit($connectionsId = null)
+    public static function commit($connectionsId = null)
     {
         $pdo = Connection::connect($connectionsId);
         return $pdo->commit();
@@ -43,7 +45,7 @@ class Query {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    static public function rollBack($connectionsId = null)
+    public static function rollBack($connectionsId = null)
     {
         $pdo = Connection::connect($connectionsId);
         return $pdo->rollBack();
@@ -56,23 +58,23 @@ class Query {
      * @throws \Exception
      * @return boolean|\PDOStatement
      */
-    static public function query($sql,$bindData = null,$connectionsId = null)
+    public static function query($sql, $bindData = null, $connectionsId = null)
     {
         if (Query::$printQuery) {
-            echo "SQL: ".$sql."<br />\r\n";
+            echo "SQL: " . $sql . "<br />\r\n";
         }
         $pdo = Connection::connect($connectionsId);
-        if(is_null($bindData) || empty($bindData)){
+        if (is_null($bindData) || empty($bindData)) {
             self::$queryString = $sql;
-            if(!$query = $pdo->query($sql)){
+            if (!$query = $pdo->query($sql)) {
                 list($handle, $codError, $StrError) = $pdo->errorInfo();
 
-                throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n".$sql,$codError);
+                throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n" . $sql, $codError);
                 return false;
             }
         } else {
             $query = $pdo->prepare($sql);
-            if(!$query->execute( $bindData )){
+            if (!$query->execute($bindData)) {
                 list($handle, $codError, $StrError) = $query->errorInfo();
                 self::$queryString = $query->queryString;
 
@@ -91,11 +93,11 @@ class Query {
      * @param String $table Nome da tabela no formato PascalCase ou snake_case
      * @param String $alias Alias da tabela
      *
-     * @return void
+     * @return Table
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    static function getTable ($table, $alias = null)
+    public static function getTable($table, $alias = null)
     {
         // if (is_null($alias)) $alias = Commons::snake_case($table);
         $objTable = Connection::getTable($table);
@@ -104,7 +106,5 @@ class Query {
         }
 
         return $objTable;
-
     }
-
 }

@@ -1,13 +1,16 @@
-<?php namespace Bmodel;
+<?php
 
-class Table {
-    static $connectionId;
-    static $tableName;
-    static $fields = [];
-    static $relations =[];
+namespace Bmodel;
+
+class Table
+{
+    public static $connectionId;
+    public static $tableName;
+    public static $fields = [];
+    public static $relations = [];
     private $queryBuild;
-    static $fieldsGlobal = [];
-    public function __construct ($tableName = '')
+    public static $fieldsGlobal = [];
+    public function __construct($tableName = '')
     {
         if ($tableName != '') {
             self::$tableName = Commons::snakeCase($tableName);
@@ -19,7 +22,7 @@ class Table {
         $this->defineRelations();
     }
 
-    public static function createPseudo ($tableName)
+    public static function createPseudo($tableName)
     {
         // Criando um pseudo class para a table (quando nao existir o Table)
         /*
@@ -36,26 +39,25 @@ class Table {
 
         return $table;
     }
-    public function defineConnection ()
+    public function defineConnection()
     {
         self::$connectionId = null;
     }
-    public function defineTable ($tableName = '')
+    public function defineTable($tableName = '')
     {
         if ($tableName != '') {
             self::$tableName = $tableName;
         }
     }
-    public function defineFields ()
+    public function defineFields()
     {
         self::$fields = $this->getFieldsFromDB();
     }
-    public function defineRelations ()
+    public function defineRelations()
     {
-
     }
 
-    public static function getConnection ()
+    public static function getConnection()
     {
         return Connection::connect(self::$connectionId);
     }
@@ -70,22 +72,23 @@ class Table {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function getFieldsFromDB($type = 0){
+    public function getFieldsFromDB($type = 0)
+    {
         $table = self::$tableName;
         $connectionsId = self::$connectionId;
-        $con = is_null(self::$connectionId) ? 0: self::$connectionId;
+        $con = is_null(self::$connectionId) ? 0 : self::$connectionId;
         if (!isset(Table::$fieldsGlobal[$con][$table])) {
-            if(is_null($table) || !Connection::isTable($table, $connectionsId)){
+            if (is_null($table) || !Connection::isTable($table, $connectionsId)) {
                 throw new \Exception("Table '{$table}' not exists");
             }
             //-------------------------------------------------//
-            $result = Query::query("SELECT * FROM `{$table}` WHERE 0 LIMIT 1",null,$connectionsId);
+            $result = Query::query("SELECT * FROM `{$table}` WHERE 0 LIMIT 1", null, $connectionsId);
             $c = $result->columnCount();
             $fields = [];
 
-            for($i=0;$i<$c;$i++){
+            for ($i = 0; $i < $c; $i++) {
                 $f = $result->getColumnMeta($i);
-                $fields[ $f['name'] ] = new Field( $f );
+                $fields[$f['name']] = new Field($f);
             }
             Table::$fieldsGlobal[$con][$table] = $fields;
         }
@@ -111,9 +114,11 @@ class Table {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getTable ($table, $alias = null)
+    public static function getTable($table, $alias = null)
     {
-        if (is_null($alias)) $alias = Commons::snakeCase($table);
+        if (is_null($alias)) {
+            $alias = Commons::snakeCase($table);
+        }
 
         $table = Connection::getTable($table);
 
@@ -125,7 +130,7 @@ class Table {
         return $table;
     }
 
-    public static function create ()
+    public static function create()
     {
         $model = Connection::getModel(self::$tableName);
         if (!$model) {
@@ -134,9 +139,9 @@ class Table {
         return $model;
     }
 
-    public function getBuild ()
+    public function getBuild()
     {
-        if(is_null($this->queryBuild)) {
+        if (is_null($this->queryBuild)) {
             $this->queryBuild = new QueryBuilder();
         }
         $this->queryBuild->setTableName(self::$tableName);
@@ -144,91 +149,91 @@ class Table {
         return $this->queryBuild;
     }
 
-    public function clearBuild ()
+    public function clearBuild()
     {
         $this->queryBuild = null;
         return $this;
     }
 
-    public function select ($fields = null)
+    public function select($fields = null)
     {
         $this->getBuild();
         $this->queryBuild->select($fields);
         return $this;
     }
 
-    public function innerJoin ($table, $on, $name)
+    public function innerJoin($table, $on, $name)
     {
         $this->getBuild();
         $this->queryBuild->innerJoin($table, $on, $name);
         return $this;
     }
 
-    public function leftJoin ($table, $on, $name)
+    public function leftJoin($table, $on, $name)
     {
         $this->getBuild();
         $this->queryBuild->leftJoin($table, $on, $name);
         return $this;
     }
 
-    public function rightJoin ($table, $on, $name)
+    public function rightJoin($table, $on, $name)
     {
         $this->getBuild();
         $this->queryBuild->rightJoin($table, $on, $name);
         return $this;
     }
 
-    public function where ($where, $params = [])
+    public function where($where, $params = [])
     {
         $this->getBuild();
         $this->queryBuild->where($where, $params);
         return $this;
     }
 
-    public function andWhere ($where, $params = [])
+    public function andWhere($where, $params = [])
     {
         $this->getBuild();
         $this->queryBuild->andWhere($where, $params);
         return $this;
     }
 
-    public function orderBy ($order)
+    public function orderBy($order)
     {
         $this->getBuild();
         $this->queryBuild->orderBy($order);
         return $this;
     }
 
-    public function start ($start)
+    public function start($start)
     {
         $this->getBuild();
         $this->queryBuild->start($start);
         return $this;
     }
 
-    public function limit ($limit)
+    public function limit($limit)
     {
         $this->getBuild();
         $this->queryBuild->limit($limit);
         return $this;
     }
 
-    public function count ()
+    public function count()
     {
         return $this->getBuild()->count();
     }
 
-    public function insert ($values)
+    public function insert($values)
     {
         return $this->getBuild()->insert($values);
     }
 
-    public function update ($values, $id = null)
+    public function update($values, $id = null)
     {
         return $this->getBuild()->update($values, $id);
     }
 
-    public function delete ()
+    public function delete()
     {
         return $this->getBuild()->delete();
     }
@@ -242,7 +247,7 @@ class Table {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function find ($id = null)
+    public function find($id = null)
     {
         return $this->getBuild()->find($id);
     }
@@ -257,7 +262,7 @@ class Table {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function findBy ($params)
+    public function findBy($params)
     {
         return $this->getBuild()->findBy($params);
     }
@@ -271,17 +276,17 @@ class Table {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function findDelete ($id)
+    public function findDelete($id)
     {
         return $this->getBuild()->findDelete($id);
     }
 
-    public function get ()
+    public function get()
     {
         return $this->getBuild()->getAll();
     }
 
-    public function getAll ($type = 0)
+    public function getAll($type = 0)
     {
         return $this->getBuild()->getAll($type);
     }

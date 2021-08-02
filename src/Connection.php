@@ -1,14 +1,16 @@
 <?php
+
 namespace Bmodel;
 
-class Connection {
-    static $connections = [];
-    static $cfgConnections = [];
-    static $tables = [];
-    static $timeZone = 'America/Sao_Paulo';
-    static $charset = 'UTF8';
-    static $modelPath;
-    static $namespaceModel = 'Model';
+class Connection
+{
+    public static $connections = [];
+    public static $cfgConnections = [];
+    public static $tables = [];
+    public static $timeZone = 'America/Sao_Paulo';
+    public static $charset = 'UTF8';
+    public static $modelPath;
+    public static $namespaceModel = 'Model';
     /**
      *
      * @param string $dbname Nome do banco de dados
@@ -21,48 +23,58 @@ class Connection {
      * @throws \Exception
      * @return boolean
      */
-    static function setConnection($dbname,$connectionsId = null,$host = NULL,$port=NULL,$username = NULL,$password = NULL,$driver = NULL){
-        $connectionsId = $connectionsId??0;
-        $driver = $driver??'mysql';
-        $host = $host??'localhost';
-        $port = $port??'3306';
-        $username = $username??'root';
-        $password = $password??'';
+    public static function setConnection(
+        $dbname,
+        $connectionsId = null,
+        $host = null,
+        $port = null,
+        $username = null,
+        $password = null,
+        $driver = null
+    ) {
+        $connectionsId = $connectionsId ?? 0;
+        $driver = $driver ?? 'mysql';
+        $host = $host ?? 'localhost';
+        $port = $port ?? '3306';
+        $username = $username ?? 'root';
+        $password = $password ?? '';
 
         $driversAceitos = array('mysql');
-        if(!in_array($driver,$driversAceitos)){
+        if (!in_array($driver, $driversAceitos)) {
             throw new \Exception("Driver Driver '{$driver}' not accepted.");
             return false;
         }
 
         self::$cfgConnections[$connectionsId] = array(
-            'driver'=>$driver,
-            'host'=>$host,
-            'port'=>$port,
-            'dbname'=>$dbname,
-            'username'=>$username,
-            'password'=>$password
+            'driver' => $driver,
+            'host' => $host,
+            'port' => $port,
+            'dbname' => $dbname,
+            'username' => $username,
+            'password' => $password
         );
         return true;
     }
     /**
-   *
-   * @param int $connectionsId Id da connection DEFAULT=NULL
-   * @param boolean $autoConnect Connect if not conected
-   * @throws \Exception
-   * @return \PDO|boolean
-   */
-    static public function connect($connectionsId = null, $autoConnect = true)
+     *
+     * @param int $connectionsId Id da connection DEFAULT=NULL
+     * @param boolean $autoConnect Connect if not conected
+     * @throws \Exception
+     * @return \PDO|boolean
+     */
+    public static function connect($connectionsId = null, $autoConnect = true)
     {
-        $connectionsId = $connectionsId??0;
+        $connectionsId = $connectionsId ?? 0;
 
-        if(isset(self::$connections[$connectionsId]))
+        if (isset(self::$connections[$connectionsId])) {
             return self::$connections[$connectionsId];
+        }
 
-        if(!$autoConnect)
+        if (!$autoConnect) {
             return false;
+        }
 
-        if(!isset(self::$cfgConnections[$connectionsId])){
+        if (!isset(self::$cfgConnections[$connectionsId])) {
             throw new \Exception("Banco de dados não configurado");
             return false;
         }
@@ -76,30 +88,29 @@ class Connection {
 
         $options = array();
         $options[\PDO::ATTR_PERSISTENT] = false;
-        if($driver=="mysql"){
+        if ($driver == "mysql") {
             //$options[\PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES 'UTF8'";
-            $options[1002] = "SET NAMES '".self::$charset."'";
+            $options[1002] = "SET NAMES '" . self::$charset . "'";
         }
 
         try {
             self::$connections[$connectionsId] = new \PDO(
-                "{$driver}:host={$host};port={$port};dbname={$dbname};charset=".self::$charset."",
+                "{$driver}:host={$host};port={$port};dbname={$dbname};charset=" . self::$charset . "",
                 $username,
                 $password,
                 $options
             );
-            self::$connections[$connectionsId]->exec("SET time_zone = '". self::$timeZone . "'");
+            self::$connections[$connectionsId]->exec("SET time_zone = '" . self::$timeZone . "'");
         } catch (\PDOException $e) {
             self::$connections[$connectionsId] = null;
-            throw new \Exception("Connection failed: " . utf8_encode( $e->getMessage() ).".");
+            throw new \Exception("Connection failed: " . utf8_encode($e->getMessage()) . ".");
             return false;
         }
 
         return self::$connections[$connectionsId];
     }
 
-
-    public static function isTable($table,$connectionsId = null)
+    public static function isTable($table, $connectionsId = null)
     {
         if (is_null($connectionsId)) {
             $con = 0;
@@ -113,7 +124,7 @@ class Connection {
         $pdo = Connection::connect($connectionsId);
         $result = $pdo->query("SHOW TABLES");
         static::$tables[$con] = [];
-        while($row = $result->fetch()) {
+        while ($row = $result->fetch()) {
             static::$tables[$con][] = $row[0];
         }
         return in_array($table, static::$tables[$con]);
@@ -122,7 +133,7 @@ class Connection {
     /**
      * Define Caminho dos arquivos model
      */
-    public static function setModelPath ($path)
+    public static function setModelPath($path)
     {
         self::$modelPath = $path;
     }
@@ -139,7 +150,7 @@ class Connection {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getModelPath ($table = null)
+    public static function getModelPath($table = null)
     {
         if (is_null(self::$modelPath)) {
             throw new \Exception("ModelPath undefined", 1);
@@ -149,7 +160,7 @@ class Connection {
             return self::$modelPath;
         }
         $modelName = Commons::pascalCase($table);
-        $modelPath = self::$modelPath . "/" . $modelName.".php";
+        $modelPath = self::$modelPath . "/" . $modelName . ".php";
         $modelPath = str_replace('\\', "/", $modelPath);
 
         if (!is_file($modelPath)) {
@@ -170,7 +181,7 @@ class Connection {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getTablePath ($table = null)
+    public static function getTablePath($table = null)
     {
         if (is_null(self::$modelPath)) {
             throw new \Exception("ModelPath undefined", 1);
@@ -180,7 +191,7 @@ class Connection {
             return self::$modelPath;
         }
         $modelName = Commons::pascalCase($table);
-        $modelPath = self::$modelPath . "/" . $modelName."Table.php";
+        $modelPath = self::$modelPath . "/" . $modelName . "Table.php";
         $modelPath = str_replace('\\', "/", $modelPath);
         /*
         if (!is_file($modelPath)) {
@@ -198,11 +209,11 @@ class Connection {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getTable ($table = null)
+    public static function getTable($table = null)
     {
         $tablePath = self::getTablePath($table);
-        $modelName = Commons::pascalCase($table)."Table";
-        $classTable = "\\".str_replace('/', "\\", self::$namespaceModel."/".$modelName);
+        $modelName = Commons::pascalCase($table) . "Table";
+        $classTable = "\\" . str_replace('/', "\\", self::$namespaceModel . "/" . $modelName);
 
         if (!is_file($tablePath)) {
             return false;
@@ -222,11 +233,11 @@ class Connection {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getModel ($table)
+    public static function getModel($table)
     {
         $modelPath = self::getModelPath($table);
         $modelName = Commons::pascalCase($table);
-        $classModel = "\\".str_replace('/', "\\", self::$namespaceModel."/".$modelName);
+        $classModel = "\\" . str_replace('/', "\\", self::$namespaceModel . "/" . $modelName);
 
         if (!is_file($modelPath)) {
             return false;
@@ -248,11 +259,11 @@ class Connection {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getRequireModel ($table)
+    public static function getRequireModel($table)
     {
         $modelPath = self::getModelPath($table);
         $modelName = Commons::pascalCase($table);
-        $classModel = "\\".str_replace('/', "\\", self::$namespaceModel."/".$modelName);
+        $classModel = "\\" . str_replace('/', "\\", self::$namespaceModel . "/" . $modelName);
 
         if (!is_file($modelPath)) {
             return false;

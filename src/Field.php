@@ -1,6 +1,9 @@
-<?php namespace Bmodel;
+<?php
 
-class Field {
+namespace Bmodel;
+
+class Field
+{
 
     private $table;
     private $name;
@@ -15,28 +18,29 @@ class Field {
     private $required = false;
     private $inRequest = true;
 
-    const TYPE_VARCHAR  = 0;
-    const TYPE_TEXT     = 1;
-    const TYPE_INTEGER  = 2;
-    const TYPE_FLOAT    = 3;
-    const TYPE_DATE     = 4;
-    const TYPE_DATETIME = 5;
-    const TYPE_TIME     = 6;
-    const TYPE_HIDDEN = 7;
-    const TYPE_BOOLEAN = 8;
-    const TYPE_COLORRGB = 9;
+    public const TYPE_VARCHAR  = 0;
+    public const TYPE_TEXT     = 1;
+    public const TYPE_INTEGER  = 2;
+    public const TYPE_FLOAT    = 3;
+    public const TYPE_DATE     = 4;
+    public const TYPE_DATETIME = 5;
+    public const TYPE_TIME     = 6;
+    public const TYPE_HIDDEN = 7;
+    public const TYPE_BOOLEAN = 8;
+    public const TYPE_COLORRGB = 9;
 
 
-    public function __construct($columnMeta){
-        $this->table = $columnMeta['table']??null;
-        $this->name = $columnMeta['name']??null;
+    public function __construct($columnMeta)
+    {
+        $this->table = $columnMeta['table'] ?? null;
+        $this->name = $columnMeta['name'] ?? null;
         $this->label = $this->name;
-        $this->nativeType = $columnMeta['native_type']??null;
-        $this->pdoType = $columnMeta['pdo_type']??null;
-        $this->len = $columnMeta['len']??null;
-        $this->precision = $columnMeta['precision']??null;
+        $this->nativeType = $columnMeta['native_type'] ?? null;
+        $this->pdoType = $columnMeta['pdo_type'] ?? null;
+        $this->len = $columnMeta['len'] ?? null;
+        $this->precision = $columnMeta['precision'] ?? null;
         $this->pattern = '/.+/';
-        switch (strtolower($this->nativeType)){
+        switch (strtolower($this->nativeType)) {
             case 'integer':// -9999
                 $this->type = self::TYPE_INTEGER;
                 $this->pattern = '/^([-])?[0-9]+$/';
@@ -68,69 +72,86 @@ class Field {
                 break;
         }
     }
-    public function getTable(){
+    public function getTable()
+    {
         return $this->table;
     }
-    public function getName(){
+    public function getName()
+    {
         return $this->name;
     }
-    public function getLabel(){
+    public function getLabel()
+    {
         return $this->label;
     }
-    public function getDefault(){
+    public function getDefault()
+    {
         return $this->defaultValue;
     }
-    public function getNativeType(){
+    public function getNativeType()
+    {
         return $this->nativeType;
     }
-    public function getPdoType(){
+    public function getPdoType()
+    {
         return $this->pdoType;
     }
-    public function getLen(){
+    public function getLen()
+    {
         return $this->len;
     }
-    public function getPrecision(){
+    public function getPrecision()
+    {
         return $this->precision;
     }
-    public function getType(){
+    public function getType()
+    {
         return $this->type;
     }
-    public function getPattern(){
+    public function getPattern()
+    {
         return $this->pattern;
     }
 
-    public function setDefault($value){
+    public function setDefault($value)
+    {
         $this->defaultValue = $value;
     }
-    public function setLabel($label){
+    public function setLabel($label)
+    {
         $this->label = $label;
     }
-    public function setType($type){
+    public function setType($type)
+    {
         $this->type = $type;
     }
-    public function setPattern($pattern){
+    public function setPattern($pattern)
+    {
         $this->pattern = $pattern;
     }
-    public function inRequest($inRequest = null){
-        if(!is_null($inRequest))
+    public function inRequest($inRequest = null)
+    {
+        if (!is_null($inRequest)) {
             $this->inRequest = $inRequest;
-
+        }
         return $this->inRequest;
     }
-    public function isRequired(){
+    public function isRequired()
+    {
         return $this->required;
     }
-    public function setRequired($required = true){
+    public function setRequired($required = true)
+    {
         $this->required = $required;
     }
-    public function validate($value = null,$strMessage = null){
-        $strMessage = $strMessage?? "{label} is invalid!";
+    public function validate($value = null, $strMessage = null)
+    {
+        $strMessage = $strMessage ?? "{label} is invalid!";
 
-        $strMessage = str_replace("{table}", $this->getTable(),$strMessage);
-        $strMessage = str_replace("{name}", $this->getName(),$strMessage);
-        $strMessage = str_replace("{label}", $this->getLabel(),$strMessage);
-        $strMessage = str_replace("{pattern}", $this->getPattern(),$strMessage);
-
+        $strMessage = str_replace("{table}", $this->getTable(), $strMessage);
+        $strMessage = str_replace("{name}", $this->getName(), $strMessage);
+        $strMessage = str_replace("{label}", $this->getLabel(), $strMessage);
+        $strMessage = str_replace("{pattern}", $this->getPattern(), $strMessage);
 
         if ($this->isRequired() && empty($value)) {
             throw new \Exception($strMessage);

@@ -1,10 +1,14 @@
-<?php namespace Bmodel;
+<?php
 
-class QueryBuilder {
+namespace Bmodel;
+
+class QueryBuilder
+{
     private $data = [];
     private $querySql;
 
-    public function __construct () {
+    public function __construct()
+    {
         $this->data = [
             'table' => null,
             'select' => null,
@@ -17,11 +21,11 @@ class QueryBuilder {
             'connectionId' => null
         ];
     }
-    public function __set ($name, $value = null)
+    public function __set($name, $value = null)
     {
         $this->data[$name] = $value;
     }
-    public function __get ($name)
+    public function __get($name)
     {
         if (!array_key_exists($name, $this->data)) {
             throw new \Exception("Parametro '{$name}' não existe ou não configurado", 1);
@@ -29,30 +33,32 @@ class QueryBuilder {
         return $this->data[$name];
     }
 
-    public function getQuerySql ()
+    public function getQuerySql()
     {
         return $this->querySql;
     }
 
-    public function getWhere ()
+    public function getWhere()
     {
         return isset($this->data['where']) && !is_null($this->data['where']) ? $this->data['where'] : '1';
     }
-    public function setTableName ($table)
+    public function setTableName($table)
     {
         $this->data['table'] = Commons::snakeCase($table);
     }
 
-    public function setConnectionId ($connectionId = null) {
+    public function setConnectionId($connectionId = null)
+    {
         $this->data['connectionId'] = $connectionId;
     }
 
-    public function select ($fields = null)
+    public function select($fields = null)
     {
         $this->data['select'] = $fields;
     }
 
-    private function addJoin ($table, $on, $name = null, $type = 'INNER') {
+    private function addJoin($table, $on, $name = null, $type = 'INNER')
+    {
         if (!isset($this->data['join'])) {
             $this->data['join'] = array();
         }
@@ -69,33 +75,33 @@ class QueryBuilder {
         ];
     }
 
-    public function innerJoin ($table, $on, $name = null)
+    public function innerJoin($table, $on, $name = null)
     {
         $this->addJoin($table, $on, $name, 'INNER');
     }
 
-    public function leftJoin ($table, $on, $name = null)
+    public function leftJoin($table, $on, $name = null)
     {
         $this->addJoin($table, $on, $name, 'left');
     }
 
-    public function rightJoin ($table, $on, $name = null)
+    public function rightJoin($table, $on, $name = null)
     {
         $this->addJoin($table, $on, $name, 'right');
     }
 
-    public function where ($where, $params = [])
+    public function where($where, $params = [])
     {
         $this->data['where'] = $where;
         $this->data['params'] = $params;
     }
 
-    public function andWhere ($where, $params = [])
+    public function andWhere($where, $params = [])
     {
         if (!isset($this->data['where'])) {
             $this->data['where'] = $where;
         } else {
-            $this->data['where'] .= ' AND '.$where;
+            $this->data['where'] .= ' AND ' . $where;
         }
         if (!isset($this->data['params'])) {
             $this->data['params'] = [];
@@ -103,39 +109,43 @@ class QueryBuilder {
         $this->data['params'] = array_merge($this->data['params'], $params);
     }
 
-    public function orderBy ($order) {
+    public function orderBy($order)
+    {
         $this->data['order'] = $order;
     }
 
-    public function start ($start) {
+    public function start($start)
+    {
         $this->data['start'] = $start;
     }
 
-    public function limit ($limit)
+    public function limit($limit)
     {
         $this->data['limit'] = $limit;
     }
 
-    private function valuesToParams ($values)
+    private function valuesToParams($values)
     {
         $params = [];
         $i = 0;
         foreach ($values as $name => $value) {
-            $params[':p_'.$i] = $value;
+            $params[':p_' . $i] = $value;
             $i++;
         }
 
         return $params;
     }
 
-    public function count ()
+    public function count()
     {
-        $querySql = "SELECT count(id) FROM `{$this->table}` WHERE ".$this->getWhere();
+        $querySql = "SELECT count(id) FROM `{$this->table}` WHERE " . $this->getWhere();
         $result = Query::query($querySql, $this->data['params'], $this->data['connectionId']);
 
-        if (!$result) return false;
+        if (!$result) {
+            return false;
+        }
 
-        list ($count) = $result->fetch(\PDO::FETCH_NUM);
+        list($count) = $result->fetch(\PDO::FETCH_NUM);
         return $count;
     }
 
@@ -148,24 +158,24 @@ class QueryBuilder {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function insert ($values)
+    public function insert($values)
     {
         $keys = [];
-        foreach ($values as $key=>$value) {
+        foreach ($values as $key => $value) {
             $keys[] = "`{$key}`";
         }
         $values = $this->valuesToParams($values);
         $keysParams = [];
-        foreach ($values as $key=>$value) {
+        foreach ($values as $key => $value) {
             $keysParams[] = "{$key}";
         }
 
         $this->data['params'] = $values;
 
-        $this->querySql = "INSERT INTO `{$this->table}` (".implode(",", $keys).") VALUES (".implode(",", $keysParams).")";
+        $this->querySql = "INSERT INTO `{$this->table}` (" . implode(",", $keys) . ") VALUES (" . implode(",", $keysParams) . ")";
         $this->exec();
         $pdo = Connection::connect($this->data['connectionId']);
-        return ((!$pdo)? false : $pdo->lastInsertId($name));
+        return ((!$pdo) ? false : $pdo->lastInsertId());
     }
 
     /**
@@ -178,14 +188,14 @@ class QueryBuilder {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function update ($values, $id = null)
+    public function update($values, $id = null)
     {
         $params = [];
         $i = 0;
         $valores = [];
         foreach ($values as $name => $value) {
-            $params[':p_'.$i] = $value;
-            $valores[] = "`$name` = :p_".$i;
+            $params[':p_' . $i] = $value;
+            $valores[] = "`$name` = :p_" . $i;
             $i++;
         }
 
@@ -195,12 +205,12 @@ class QueryBuilder {
         $this->data['params'][] = $params;
 
         if (!is_null($id)) {
-            $this->where('id = '.intval($id), $params);
+            $this->where('id = ' . intval($id), $params);
         }
 
-        $this->querySql = "UPDATE `{$this->table}` SET ".implode(", ", $valores). " WHERE ".$this->getWhere();
+        $this->querySql = "UPDATE `{$this->table}` SET " . implode(", ", $valores) . " WHERE " . $this->getWhere();
 
-        return (!$this->exec())? false : true;
+        return (!$this->exec()) ? false : true;
     }
 
     /**
@@ -210,10 +220,10 @@ class QueryBuilder {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function delete ()
+    public function delete()
     {
-        $this->querySql = "DELETE FROM `{$this->table}` WHERE ".$this->getWhere();
-        return (!$this->exec())? false : true;
+        $this->querySql = "DELETE FROM `{$this->table}` WHERE " . $this->getWhere();
+        return (!$this->exec()) ? false : true;
     }
 
 
@@ -226,7 +236,7 @@ class QueryBuilder {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function find ($id = null)
+    public function find($id = null)
     {
         if (is_null($id)) {
             return $this->findBy();
@@ -245,7 +255,7 @@ class QueryBuilder {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function findBy ($params = [])
+    public function findBy($params = [])
     {
         $bindData = [];
         if (is_string($params)) {
@@ -257,8 +267,8 @@ class QueryBuilder {
             $i = 0;
             $where = [];
             foreach ($params as $name => $value) {
-                $bindData[':p_'.$i] = $value;
-                $where[] = "`$name` = :p_".$i;
+                $bindData[':p_' . $i] = $value;
+                $where[] = "`$name` = :p_" . $i;
                 $i++;
             }
             if (empty($where)) {
@@ -273,13 +283,15 @@ class QueryBuilder {
 
         $res = $this->get();
 
-        if (!$res || $res->rowCount() == 0) return false;
+        if (!$res || $res->rowCount() == 0) {
+            return false;
+        }
 
         $model = Connection::getRequireModel($this->table);
         if (!$model) {
             $model = "\\Bmodel\\Record";
         }
-        $res->setFetchMode(\PDO::FETCH_CLASS|\PDO::FETCH_PROPS_LATE, $model);
+        $res->setFetchMode(\PDO::FETCH_CLASS | \PDO::FETCH_PROPS_LATE, $model);
         return $res->fetch();
     }
 
@@ -292,13 +304,13 @@ class QueryBuilder {
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public function findDelete ($id)
+    public function findDelete($id)
     {
         $this->querySql = "DELETE FROM `{$this->table}` WHERE id = {$id}";
-        return (!$this->exec())? false : true;
+        return (!$this->exec()) ? false : true;
     }
 
-    public function get ()
+    public function get()
     {
         if (is_null($this->data['select']) || empty($this->data['select'])) {
             $fields = "*";
@@ -312,36 +324,39 @@ class QueryBuilder {
                 $sep = ',';
             }
         }
-        $this->querySql = "SELECT {$fields} FROM `{$this->table}` WHERE ".$this->getWhere();
+        $this->querySql = "SELECT {$fields} FROM `{$this->table}` WHERE " . $this->getWhere();
 
         if (!is_null($this->order)) {
-            $this->querySql .= " ORDER BY ".$this->order;
+            $this->querySql .= " ORDER BY " . $this->order;
         }
         if (!is_null($this->limit)) {
             if (!is_null($this->start)) {
-                $this->querySql .= " LIMIT ".$this->start.",".$this->limit;
+                $this->querySql .= " LIMIT " . $this->start . "," . $this->limit;
             } else {
-                $this->querySql .= " LIMIT ".$this->limit;
+                $this->querySql .= " LIMIT " . $this->limit;
             }
         }
         return $this->exec();
     }
 
-    public function getAll ($type = 0)
+    public function getAll($type = 0)
     {
         $res = $this->get();
-        if (!$res || $res->rowCount() == 0) return false;
+        if (!$res || $res->rowCount() == 0) {
+            return false;
+        }
 
         $model = Connection::getRequireModel($this->table);
         if (!$model) {
             $model = "\\Bmodel\\Record";
         }
 
-        $res->setFetchMode(\PDO::FETCH_CLASS|\PDO::FETCH_PROPS_LATE, $model);
-        return new ResultsQuery($res->fetchAll(), $this->querySql, $this->data['params']);// return $res->fetchAll(\PDO::FETCH_CLASS, $model);
+        $res->setFetchMode(\PDO::FETCH_CLASS | \PDO::FETCH_PROPS_LATE, $model);
+        return new ResultsQuery($res->fetchAll(), $this->querySql, $this->data['params']);
+        // return $res->fetchAll(\PDO::FETCH_CLASS, $model);
     }
 
-    public function exec ()
+    public function exec()
     {
         return Query::query($this->querySql, $this->data['params'], $this->data['connectionId']);
     }
