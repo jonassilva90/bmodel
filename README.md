@@ -21,7 +21,7 @@ Connection::setConnection(
   'localhost',    // Hostname
   NULL,           // Port
   'usuario', // Username
-  'senhaMuitoDificio'      // password
+  'senhaMuitoDificil'      // password
 );
 
 Connection::setModelPath('Model'); // pasta
@@ -156,7 +156,7 @@ echo $objCliente->id; // Novo id
 // Exemplo de INSERT #2
 $objCliente = Query::getTable('cliente')->insert([
   'nome' => "Maria",
-  "email" => "maria@exemplo.com"
+  'email' => "maria@exemplo.com"
 ]);
 
 echo $objCliente->id; // Novo id
@@ -170,7 +170,7 @@ $objCliente->save();
 // Exemplo de UPDATE #2
 $objCliente = Query::getTable('cliente')->update([
   'nome' => "José",
-  "email" => "jose@exemplo.com"
+  'email' => "jose@exemplo.com"
 ]);
 
 // Exemplo de DELETE #1
