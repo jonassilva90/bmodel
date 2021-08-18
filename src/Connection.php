@@ -219,7 +219,7 @@ class Connection
             return false;
         }
 
-        require_once($modelPath);
+        require_once($tablePath);
 
         return new $classTable();
     }
