@@ -162,7 +162,7 @@ class Table
         }
         $this->queryBuild->setTableName(self::$tableName);
         $this->queryBuild->setPrimaryKey(self::$primaryKey);
-        return $this;
+        return $this->queryBuild;
     }
 
     public function select($fields = null)
