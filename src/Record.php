@@ -99,7 +99,7 @@ class Record
         }
 
         // Refresh data
-        $this->data = $table->find($this->data[$primaryKey])->toArray();
+        $this->data = Query::getTable($this->table, null, $primaryKey)->find($this->data[$primaryKey])->toArray();
 
         return $result;
     }
