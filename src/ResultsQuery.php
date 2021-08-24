@@ -8,7 +8,8 @@ class ResultsQuery
     private $c = -1;
     private $querySql;
     private $params = [];
-    public function __construct($data, $querySql = '', $params = [])
+    private $primaryKey = 'id';
+    public function __construct($data, $querySql = '', $params = [], $primaryKey = 'id')
     {
         $this->querySql = $querySql;
         $this->data = $data;
@@ -48,6 +49,7 @@ class ResultsQuery
     {
         $this->c++;
         if (isset($this->data[$this->c])) {
+            $this->data[$this->c]->setPrimaryKey($this->primaryKey);
             return $this->data[$this->c];
         }
         return false;
@@ -55,7 +57,15 @@ class ResultsQuery
 
     public function fetchAll()
     {
-        return $this->data;
+        $primaryKey = $this->primaryKey;
+
+        return array_map(
+            function ($row) use ($primaryKey) {
+                $row->setPrimaryKey($primaryKey);
+                return $row;
+            },
+            $this->data
+        );
     }
 
     public function toArray()

@@ -228,12 +228,13 @@ class Connection
      * Traz model da tabela
      *
      * @param String $table
+     * @param String $primaryKey
      *
      * @return void
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getModel($table)
+    public static function getModel($table, $primaryKey = 'id')
     {
         $modelPath = self::getModelPath($table);
         $modelName = Commons::pascalCase($table);
@@ -246,6 +247,7 @@ class Connection
         require_once($modelPath);
         $model =  new $classModel($table);
         $model->setTableName($table);
+        $model->setPrimaryKey($primaryKey);
         $model->reviewFields();
         return $model;
     }
@@ -259,7 +261,7 @@ class Connection
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getRequireModel($table)
+    public static function getRequireModel($table, $primaryKey = 'id')
     {
         $modelPath = self::getModelPath($table);
         $modelName = Commons::pascalCase($table);

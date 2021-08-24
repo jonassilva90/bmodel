@@ -63,6 +63,7 @@ class Query
         if (Query::$printQuery) {
             echo "SQL: " . $sql . "<br />\r\n";
         }
+
         $pdo = Connection::connect($connectionsId);
         if (is_null($bindData) || empty($bindData)) {
             self::$queryString = $sql;
@@ -92,15 +93,17 @@ class Query
      *
      * @param String $table Nome da tabela no formato PascalCase ou snake_case
      * @param String $alias Alias da tabela
+     * @param String $primaryKey Campo primary key da tabela
      *
      * @return Table
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getTable($table, $alias = null)
+    public static function getTable($table, $alias = null, $primaryKey = 'id')
     {
         // if (is_null($alias)) $alias = Commons::snake_case($table);
         $objTable = Connection::getTable($table);
+        $objTable->setPrimaryKey($primaryKey);
         if (!$objTable) {
             return Table::createPseudo($table);
         }

@@ -5,21 +5,21 @@ namespace Bmodel;
 class Record
 {
     private $table;
+    private $primaryKey = 'id';
     private $data;
     private $paramsSet = [];
     public function __construct()
     {
-        $data = [
-            'id' => null
-        ];
+        $data = [];
     }
-    public static function createPseudo($tableName, $data = null)
+    public static function createPseudo($tableName, $data = null, $primaryKey = 'id')
     {
         // Criando um pseudo class para a table (quando nao existir o Table)
         $record = new class () extends Record
         {
         };
         $record->setTableName($tableName);
+        $record->setPrimaryKey($primaryKey);
         if (!is_null($data)) {
             $record->setData($data);
         }
@@ -27,10 +27,20 @@ class Record
 
         return $record;
     }
+    public function setPrimaryKey($name)
+    {
+        $this->primaryKey = $name;
+    }
+    public function getPrimaryKey()
+    {
+        return $this->primaryKey;
+    }
     public function reviewFields()
     {
         $data = $this->data;
-        $fields = Query::getTable($this->table)->getFieldsFromDB();
+        $table = Query::getTable($this->table, null, $table->getPrimaryKey());
+        $this->primaryKey = $table->getPrimaryKey();
+        $fields = $table->getFieldsFromDB();
         foreach ($fields as $field => $objField) {
             if (is_null($data) || !array_key_exists($field, $data)) {
                 $data[$field] = $objField->getDefault();
@@ -52,7 +62,7 @@ class Record
     public function __get($name)
     {
         if (!array_key_exists($name, $this->data)) {
-            throw new \Exception("Campo '{$name}' não existe na tabela '$this->table}'");
+            throw new \Exception("Campo '{$name}' não existe na tabela '$this->table'");
         }
         return $this->data[$name];
     }
@@ -69,36 +79,39 @@ class Record
 
     public function save()
     {
-        if (is_null($this->data['id'])) {
+        $primaryKey = $this->primaryKey;
+        $table = Query::getTable($this->table, null, $primaryKey);
+        if (!isset($this->data[$primaryKey]) || is_null($this->data[$primaryKey])) {
             $dados = array_filter(
                 $this->data,
-                function ($k) {
-                    return $k != 'id';
+                function ($k) use ($primaryKey){
+                    return $k != $primaryKey;
                 },
                 ARRAY_FILTER_USE_KEY
             );
-            $result = Query::getTable($this->table)->insert($dados);
-            if ($result != false) {
-                $this->data['id'] = $result;
-                $result = true;
+            $primaryKeyValue =$table->insert($dados);
+            $result = !!$primaryKeyValue;
+            if ($result) {
+                $this->data[$primaryKey] = $primaryKeyValue;
             }
         } else {
-            $result = Query::getTable($this->table)->update($this->paramsSet, $this->data['id']);
+            $result = $table->update($this->paramsSet, $this->data[$primaryKey]);
         }
 
         // Refresh data
-        $find = Query::getTable($this->table)->find($this->data['id']);
-        $this->data = $find->toArray();
+        $this->data = $table->find($this->data[$primaryKey])->toArray();
 
         return $result;
     }
 
     public function delete()
     {
-        if (is_null($this->data['id'])) {
+        $primaryKey = $this->primaryKey;
+        if (is_null($this->data[$primaryKey])) {
             return false;
         }
-        return Query::getTable($this->table)->findDelete($this->data['id']);
+        return Query::getTable($this->table, null, $primaryKey)
+            ->findDelete($this->data[$primaryKey]);
     }
 
     public function toArray()

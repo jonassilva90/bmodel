@@ -6,8 +6,12 @@ class Table
 {
     public static $connectionId;
     public static $tableName;
+    public static $primaryKey = 'id';
     public static $fields = [];
     public static $relations = [];
+    /**
+     * @var QueryBuilder 
+     */
     private $queryBuild;
     public static $fieldsGlobal = [];
     public function __construct($tableName = '')
@@ -20,6 +24,16 @@ class Table
         $this->defineTable();
         $this->defineFields();
         $this->defineRelations();
+    }
+
+    public static function setPrimaryKey($name)
+    {
+        self::$primaryKey = $name;
+    }
+
+    public static function getPrimaryKey()
+    {
+        return self::$primaryKey;
     }
 
     public static function createPseudo($tableName)
@@ -109,18 +123,20 @@ class Table
      *
      * @param String $table Nome da tabela no formato PascalCase ou snakeCase
      * @param String $alias Alias da tabela
+     * @param String $primaryKey
      *
      * @return void
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getTable($table, $alias = null)
+    public static function getTable($table, $alias = null, $primaryKey = 'id')
     {
         if (is_null($alias)) {
             $alias = Commons::snakeCase($table);
         }
 
         $table = Connection::getTable($table);
+        $table->setPrimaryKey($primaryKey);
 
         if (!$table) {
             // Criando um pseudo class para a table (quando nao existir o Table)
@@ -132,9 +148,9 @@ class Table
 
     public static function create()
     {
-        $model = Connection::getModel(self::$tableName);
+        $model = Connection::getModel(self::$tableName, self::$primaryKey);
         if (!$model) {
-            $model = Record::createPseudo(self::$tableName);
+            $model = Record::createPseudo(self::$tableName, null, self::$primaryKey);
         }
         return $model;
     }
@@ -145,13 +161,7 @@ class Table
             $this->queryBuild = new QueryBuilder();
         }
         $this->queryBuild->setTableName(self::$tableName);
-        $this->queryBuild->setConnectionId(self::$connectionId);
-        return $this->queryBuild;
-    }
-
-    public function clearBuild()
-    {
-        $this->queryBuild = null;
+        $this->queryBuild->setPrimaryKey(self::$primaryKey);
         return $this;
     }
 

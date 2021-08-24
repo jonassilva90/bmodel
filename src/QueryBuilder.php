@@ -6,6 +6,7 @@ class QueryBuilder
 {
     private $data = [];
     private $querySql;
+    private $primaryKey = 'id';
 
     public function __construct()
     {
@@ -31,6 +32,16 @@ class QueryBuilder
             throw new \Exception("Parametro '{$name}' não existe ou não configurado", 1);
         }
         return $this->data[$name];
+    }
+
+    public function setPrimaryKey($name)
+    {
+        $this->primaryKey = $name;
+    }
+
+    public function getPrimaryKey()
+    {
+        return $this->primaryKey;
     }
 
     public function getQuerySql()
@@ -138,7 +149,7 @@ class QueryBuilder
 
     public function count()
     {
-        $querySql = "SELECT count(id) FROM `{$this->table}` WHERE " . $this->getWhere();
+        $querySql = "SELECT count(" . $this->primaryKey . ") FROM `{$this->table}` WHERE " . $this->getWhere();
         $result = Query::query($querySql, $this->data['params'], $this->data['connectionId']);
 
         if (!$result) {
@@ -205,7 +216,7 @@ class QueryBuilder
         $this->data['params'][] = $params;
 
         if (!is_null($id)) {
-            $this->where('id = ' . intval($id), $params);
+            $this->where($this->primaryKey . ' = ' . intval($id), $params);
         }
 
         $this->querySql = "UPDATE `{$this->table}` SET " . implode(", ", $valores) . " WHERE " . $this->getWhere();
@@ -241,7 +252,7 @@ class QueryBuilder
         if (is_null($id)) {
             return $this->findBy();
         } else {
-            return $this->findBy(['id' => $id]);
+            return $this->findBy([$this->primaryKey => $id]);
         }
     }
 
@@ -306,7 +317,7 @@ class QueryBuilder
      */
     public function findDelete($id)
     {
-        $this->querySql = "DELETE FROM `{$this->table}` WHERE id = {$id}";
+        $this->querySql = "DELETE FROM `{$this->table}` WHERE " . $this->primaryKey . " = {$id}";
         return (!$this->exec()) ? false : true;
     }
 
@@ -352,12 +363,21 @@ class QueryBuilder
         }
 
         $res->setFetchMode(\PDO::FETCH_CLASS | \PDO::FETCH_PROPS_LATE, $model);
-        return new ResultsQuery($res->fetchAll(), $this->querySql, $this->data['params']);
+        return new ResultsQuery(
+            $res->fetchAll(),
+            $this->querySql,
+            $this->data['params'],
+            $this->getPrimaryKey()
+        );
         // return $res->fetchAll(\PDO::FETCH_CLASS, $model);
     }
 
     public function exec()
     {
-        return Query::query($this->querySql, $this->data['params'], $this->data['connectionId']);
+        return Query::query(
+            $this->querySql,
+            $this->data['params'],
+            $this->data['connectionId']
+        );
     }
 }
