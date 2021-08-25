@@ -103,10 +103,10 @@ class Query
     {
         // if (is_null($alias)) $alias = Commons::snake_case($table);
         $objTable = Connection::getTable($table);
-        $objTable->setPrimaryKey($primaryKey);
         if (!$objTable) {
             return Table::createPseudo($table);
         }
+        $objTable->setPrimaryKey($primaryKey);
 
         return $objTable;
     }
