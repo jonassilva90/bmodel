@@ -81,7 +81,8 @@ class Record
     {
         $primaryKey = $this->primaryKey;
         $table = Query::getTable($this->table, null, $primaryKey);
-        if (!isset($this->data[$primaryKey]) || is_null($this->data[$primaryKey])) {
+        $this->data[$primaryKey] = $this->data[$primaryKey] ?? null;
+        if (is_null($this->data[$primaryKey])) {
             $dados = array_filter(
                 $this->data,
                 function ($k) use ($primaryKey){
@@ -107,6 +108,7 @@ class Record
     public function delete()
     {
         $primaryKey = $this->primaryKey;
+        $this->data[$primaryKey] = $this->data[$primaryKey] ?? null;
         if (is_null($this->data[$primaryKey])) {
             return false;
         }

@@ -136,12 +136,12 @@ class Table
         }
 
         $table = Connection::getTable($table);
-        $table->setPrimaryKey($primaryKey);
-
+        
         if (!$table) {
             // Criando um pseudo class para a table (quando nao existir o Table)
             $table = self::createPseudo($table);
         }
+        $table->setPrimaryKey($primaryKey);
 
         return $table;
     }
