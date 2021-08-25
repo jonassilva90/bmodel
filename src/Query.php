@@ -65,7 +65,7 @@ class Query
         }
 
         $pdo = Connection::connect($connectionsId);
-        if (is_null($bindData) || empty($bindData)) {
+        if (is_null($bindData) || !is_array($bindData) || empty($bindData)) {
             self::$queryString = $sql;
             if (!$query = $pdo->query($sql)) {
                 list($handle, $codError, $StrError) = $pdo->errorInfo();
