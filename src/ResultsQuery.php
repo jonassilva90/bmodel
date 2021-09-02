@@ -42,7 +42,7 @@ class ResultsQuery
 
     public function count()
     {
-        return count($this->data[$this->c]);
+        return count($this->data);
     }
 
     public function fetch()
