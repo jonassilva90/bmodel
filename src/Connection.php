@@ -30,7 +30,8 @@ class Connection
         $port = null,
         $username = null,
         $password = null,
-        $driver = null
+        $driver = null,
+        $persistent = false
     ) {
         $connectionsId = $connectionsId ?? 0;
         $driver = $driver ?? 'mysql';
@@ -51,7 +52,8 @@ class Connection
             'port' => $port,
             'dbname' => $dbname,
             'username' => $username,
-            'password' => $password
+            'password' => $password,
+            'persistent' => $persistent
         );
         return true;
     }
@@ -85,9 +87,10 @@ class Connection
         $dbname = self::$cfgConnections[$connectionsId]['dbname'];
         $username = self::$cfgConnections[$connectionsId]['username'];
         $password = self::$cfgConnections[$connectionsId]['password'];
+        $persistent = self::$cfgConnections[$connectionsId]['persistent'];
 
         $options = array();
-        $options[\PDO::ATTR_PERSISTENT] = false;
+        $options[\PDO::ATTR_PERSISTENT] = !!$persistent;
         if ($driver == "mysql") {
             //$options[\PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES 'UTF8'";
             $options[1002] = "SET NAMES '" . self::$charset . "'";

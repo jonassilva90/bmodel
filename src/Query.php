@@ -55,10 +55,11 @@ class Query
      * @param string $sql
      * @param array $bindData Array com os valores para o bind.
      * @param int $connectionsId Id da connection DEFAULT=NULL
+     * @param boolean $reconnect Reconecta quando falha DEFAULT=true
      * @throws \Exception
      * @return boolean|\PDOStatement
      */
-    public static function query($sql, $bindData = null, $connectionsId = null)
+    public static function query($sql, $bindData = null, $connectionsId = null, $reconnect = true)
     {
         if (Query::$printQuery) {
             echo "SQL: " . $sql . "<br />\r\n";
@@ -70,6 +71,11 @@ class Query
             if (!$query = $pdo->query($sql)) {
                 list($handle, $codError, $StrError) = $pdo->errorInfo();
 
+                if ($codError == 2006) {
+                    Connection::connect($connectionsId, true, true);
+                    return self::query($sql, $bindData, $connectionsId, false);
+                }
+
                 throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n" . $sql, $codError);
                 return false;
             }
@@ -78,6 +84,11 @@ class Query
             if (!$query->execute($bindData)) {
                 list($handle, $codError, $StrError) = $query->errorInfo();
                 self::$queryString = $query->queryString;
+
+                if ($codError == 2006) {
+                    Connection::connect($connectionsId, true, true);
+                    return self::query($sql, $bindData, $connectionsId, false);
+                }
 
                 throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n", $codError);
                 return false;
