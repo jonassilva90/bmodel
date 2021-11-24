@@ -38,7 +38,7 @@ class Record
     public function reviewFields()
     {
         $data = $this->data;
-        $table = Query::getTable($this->table, null, $table->getPrimaryKey());
+        $table = Query::getTable($this->table, null);
         $this->primaryKey = $table->getPrimaryKey();
         $fields = $table->getFieldsFromDB();
         foreach ($fields as $field => $objField) {
