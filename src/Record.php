@@ -6,7 +6,7 @@ class Record
 {
     private $table;
     private $primaryKey = 'id';
-    private $data;
+    private $_data;
     private $paramsSet = [];
     public function __construct()
     {
@@ -37,7 +37,7 @@ class Record
     }
     public function reviewFields()
     {
-        $data = $this->data;
+        $data = $this->_data;
         $table = Query::getTable($this->table, null);
         $this->primaryKey = $table->getPrimaryKey();
         $fields = $table->getFieldsFromDB();
@@ -50,26 +50,26 @@ class Record
     }
     public function setData($data = [])
     {
-        $this->data = $data;
+        $this->_data = $data;
     }
 
     public function __set($name, $value = null)
     {
-        $this->data[$name] = $value;
+        $this->_data[$name] = $value;
         $this->paramsSet[$name] = $value;
     }
 
     public function __get($name)
     {
-        if (!array_key_exists($name, $this->data)) {
+        if (!array_key_exists($name, $this->_data)) {
             throw new \Exception("Campo '{$name}' não existe na tabela '$this->table'");
         }
-        return $this->data[$name];
+        return $this->_data[$name];
     }
 
     public function getFields()
     {
-        return $this->data;
+        return $this->_data;
     }
 
     public function setTableName($table)
@@ -81,10 +81,10 @@ class Record
     {
         $primaryKey = $this->primaryKey;
         $table = Query::getTable($this->table, null, $primaryKey);
-        $this->data[$primaryKey] = $this->data[$primaryKey] ?? null;
-        if (is_null($this->data[$primaryKey])) {
+        $this->_data[$primaryKey] = $this->_data[$primaryKey] ?? null;
+        if (is_null($this->_data[$primaryKey])) {
             $dados = array_filter(
-                $this->data,
+                $this->_data,
                 function ($k) use ($primaryKey){
                     return $k != $primaryKey;
                 },
@@ -93,14 +93,14 @@ class Record
             $primaryKeyValue =$table->insert($dados);
             $result = !!$primaryKeyValue;
             if ($result) {
-                $this->data[$primaryKey] = $primaryKeyValue;
+                $this->_data[$primaryKey] = $primaryKeyValue;
             }
         } else {
-            $result = $table->update($this->paramsSet, $this->data[$primaryKey]);
+            $result = $table->update($this->paramsSet, $this->_data[$primaryKey]);
         }
 
         // Refresh data
-        $this->data = Query::getTable($this->table, null, $primaryKey)->find($this->data[$primaryKey])->toArray();
+        $this->_data = Query::getTable($this->table, null, $primaryKey)->find($this->_data[$primaryKey])->toArray();
 
         return $result;
     }
@@ -108,26 +108,26 @@ class Record
     public function delete()
     {
         $primaryKey = $this->primaryKey;
-        $this->data[$primaryKey] = $this->data[$primaryKey] ?? null;
-        if (is_null($this->data[$primaryKey])) {
+        $this->_data[$primaryKey] = $this->_data[$primaryKey] ?? null;
+        if (is_null($this->_data[$primaryKey])) {
             return false;
         }
         return Query::getTable($this->table, null, $primaryKey)
-            ->findDelete($this->data[$primaryKey]);
+            ->findDelete($this->_data[$primaryKey]);
     }
 
     public function toArray()
     {
-        return $this->data;
+        return $this->_data;
     }
 
     public function toArrayNum()
     {
-        return array_values($this->data);
+        return array_values($this->_data);
     }
 
     public function toJSON($typeJSON = 0)
     {
-        return json_encode($this->data, $typeJSON);
+        return json_encode($this->_data, $typeJSON);
     }
 }
