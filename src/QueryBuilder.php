@@ -93,12 +93,12 @@ class QueryBuilder
 
     public function leftJoin($table, $on, $name = null)
     {
-        $this->addJoin($table, $on, $name, 'left');
+        $this->addJoin($table, $on, $name, 'LEFT');
     }
 
     public function rightJoin($table, $on, $name = null)
     {
-        $this->addJoin($table, $on, $name, 'right');
+        $this->addJoin($table, $on, $name, 'RIGHT');
     }
 
     public function where($where, $params = [])
@@ -149,7 +149,13 @@ class QueryBuilder
 
     public function count()
     {
-        $querySql = "SELECT count(" . $this->primaryKey . ") FROM `{$this->table}` WHERE " . $this->getWhere();
+        $querySql = "SELECT count(" . $this->primaryKey . ") FROM `{$this->table}`";
+
+        foreach ($this->data['join'] as $join) {
+            $this->querySql .= " {$join->type} JOIN {$join->table} {$join->name} ON {$join->on}";
+        }
+
+        $querySql .= " WHERE " . $this->getWhere();
         $result = Query::query($querySql, $this->data['params'], $this->data['connectionId']);
 
         if (!$result) {
@@ -335,7 +341,13 @@ class QueryBuilder
                 $sep = ',';
             }
         }
-        $this->querySql = "SELECT {$fields} FROM `{$this->table}` WHERE " . $this->getWhere();
+        $this->querySql = "SELECT {$fields} FROM `{$this->table}`";
+
+        foreach ($this->data['join'] as $join) {
+            $this->querySql .= " {$join->type} JOIN {$join->table} {$join->name} ON {$join->on}";
+        }
+
+        $this->querySql .= " WHERE " . $this->getWhere();
 
         if (!is_null($this->order)) {
             $this->querySql .= " ORDER BY " . $this->order;
