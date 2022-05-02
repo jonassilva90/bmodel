@@ -151,8 +151,10 @@ class QueryBuilder
     {
         $querySql = "SELECT count(" . $this->primaryKey . ") FROM `{$this->table}`";
 
-        foreach ($this->data['join'] as $join) {
-            $this->querySql .= " {$join->type} JOIN {$join->table} {$join->name} ON {$join->on}";
+        if (!is_null($this->data['join'])) {
+            foreach ($this->data['join'] as $join) {
+                $this->querySql .= " {$join->type} JOIN {$join->table} {$join->name} ON {$join->on}";
+            }
         }
 
         $querySql .= " WHERE " . $this->getWhere();
@@ -343,8 +345,10 @@ class QueryBuilder
         }
         $this->querySql = "SELECT {$fields} FROM `{$this->table}`";
 
-        foreach ($this->data['join'] as $join) {
-            $this->querySql .= " {$join->type} JOIN {$join->table} {$join->name} ON {$join->on}";
+        if (!is_null($this->data['join'])) {
+            foreach ($this->data['join'] as $join) {
+                $this->querySql .= " {$join->type} JOIN {$join->table} {$join->name} ON {$join->on}";
+            }
         }
 
         $this->querySql .= " WHERE " . $this->getWhere();
