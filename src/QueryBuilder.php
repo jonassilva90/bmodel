@@ -5,27 +5,18 @@ namespace Bmodel;
 class QueryBuilder
 {
     private $data = [];
+    private $bufferData = [];
     private $querySql;
-    private $primaryKey = 'id';
-
     public function __construct()
     {
-        $this->data = [
-            'table' => null,
-            'select' => null,
-            'join' => null,
-            'where' => null,
-            'params' => null,
-            'order' => null,
-            'start' => null,
-            'limit' => null,
-            'connectionId' => null
-        ];
+        $this->data['clearOnExec'] = true;
+        $this->clearData();
     }
     public function __set($name, $value = null)
     {
         $this->data[$name] = $value;
     }
+
     public function __get($name)
     {
         if (!array_key_exists($name, $this->data)) {
@@ -34,41 +25,107 @@ class QueryBuilder
         return $this->data[$name];
     }
 
-    public function setPrimaryKey($name)
+    private function pushBufferData()
     {
-        $this->primaryKey = $name;
+        $this->bufferData[] = $this->data;
+        return $this;
     }
 
-    public function getPrimaryKey()
+    private function backBufferData()
     {
-        return $this->primaryKey;
+        $data = array_pop($this->bufferData);
+        if (is_null($data)) {
+            $this->data = [];
+            $this->clearData();
+        }
+        $this->data = $data;
+        return $this;
     }
 
-    public function getQuerySql()
+    public function setPrimaryKey(string $name)
+    {
+        $this->data['privateKey'] = $name;
+        return $this;
+    }
+
+    public function setClearOnExec($clearOnExec = true)
+    {
+        $this->data['clearOnExec'] = $clearOnExec;
+        return $this;
+    }
+
+    public function getPrivateKey()
+    {
+        return $this->data['privateKey'] ?? null;
+    }
+
+    public function getQuerySql(): string
     {
         return $this->querySql;
     }
 
-    public function getWhere()
+    public function getWhere(): string
     {
-        return isset($this->data['where']) && !is_null($this->data['where']) ? $this->data['where'] : '1';
-    }
-    public function setTableName($table)
-    {
-        $this->data['table'] = Commons::snakeCase($table);
+        if (!isset($this->data['where']) || empty($this->data['where'])) {
+            return "1=1";
+        }
+
+        $where = '';
+        foreach ($this->data['where'] as $i => $item) {
+            if ($i > 0) {
+                $where .= " {$item->separator} " . $item->value;
+            } else {
+                $where .= $item->value;
+            }
+        }
+        return $where;
     }
 
-    public function setConnectionId($connectionId = null)
+    public function getBindParams(): array
     {
-        $this->data['connectionId'] = $connectionId;
+        return $this->data['params'] ?? [];
+    }
+
+    public function setTableName($tableName, $tableAlias = null)
+    {
+        $this->data['table'] = $tableName;
+        $this->data['tableAlias'] = $tableAlias;
+        return $this;
+    }
+
+    public function getTableName()
+    {
+        return $this->data['table'] ?? null;
+    }
+
+    public function getTableAlias()
+    {
+        return $this->data['tableAlias'] ?? null;
+    }
+
+    public function setConnectionId($connId = null)
+    {
+        $this->data['connId'] = $connId;
+        return $this;
+    }
+    public function getConnectionId()
+    {
+        return $this->data['connId'];
     }
 
     public function select($fields = null)
     {
-        $this->data['select'] = $fields;
+        if (is_null($fields)) {
+            $this->data['select'] = '*';
+        } elseif (is_array($fields)) {
+            $this->data['select'] = implode(',', $fields);
+        } else {
+            $this->data['select'] = $fields;
+        }
+        return $this;
     }
 
-    private function addJoin($table, $on, $name = null, $type = 'INNER')
+    public function join($table, $on, $type = 'INNER', $name = null)
     {
         if (!isset($this->data['join'])) {
             $this->data['join'] = array();
@@ -79,161 +136,194 @@ class QueryBuilder
         }
 
         $this->data['join'][] = (object)[
-            'type' => $type,
+            'type' => strtoupper($type),
             'table' => Commons::snakeCase($table),
             'on' => $on,
             'name' => $name
         ];
+        return $this;
     }
+
 
     public function innerJoin($table, $on, $name = null)
     {
-        $this->addJoin($table, $on, $name, 'INNER');
+        return $this->join($table, $on, 'INNER', $name);
     }
 
     public function leftJoin($table, $on, $name = null)
     {
-        $this->addJoin($table, $on, $name, 'left');
+        return $this->join($table, $on, 'LEFT', $name);
     }
 
     public function rightJoin($table, $on, $name = null)
     {
-        $this->addJoin($table, $on, $name, 'right');
+        return $this->join($table, $on, 'RIGHT', $name);
     }
 
-    public function where($where, $params = [])
-    {
-        $this->data['where'] = $where;
-        $this->data['params'] = $params;
-    }
-
-    public function andWhere($where, $params = [])
+    public function where($where, $params = [], $separator = 'AND')
     {
         if (!isset($this->data['where'])) {
-            $this->data['where'] = $where;
-        } else {
-            $this->data['where'] .= ' AND ' . $where;
+            $this->data['where'] = [];
         }
+
+        $this->data['where'][] = (object)[
+            'value' => $where,
+            'separator' => $separator
+        ];
+
         if (!isset($this->data['params'])) {
             $this->data['params'] = [];
         }
-        $this->data['params'] = array_merge($this->data['params'], $params);
+
+        if (!empty($params)) {
+            $this->data['params'] = array_merge($this->data['params'], $params);
+        }
+        return $this;
+    }
+    public function andWhere($where, $params = [])
+    {
+        return $this->where($where, $params, 'AND');
+    }
+
+    public function orWhere($where, $params = [])
+    {
+        return $this->where($where, $params, 'OR');
+    }
+
+    public function beginGroupWhere($separator = 'AND')
+    {
+        return $this->where('(', [], $separator);
+    }
+
+    public function endGroupWhere()
+    {
+        return $this->where(')', [], '');
     }
 
     public function orderBy($order)
     {
+        if (isset($this->data['order']) && !empty($this->data['order'])) {
+            $this->data['order'] .= ',' . $order;
+            return $this;
+        }
         $this->data['order'] = $order;
+        return $this;
     }
 
     public function start($start)
     {
         $this->data['start'] = $start;
+        return $this;
     }
 
     public function limit($limit)
     {
         $this->data['limit'] = $limit;
+        return $this;
     }
 
-    private function valuesToParams($values)
+    private function clearData()
     {
-        $params = [];
-        $i = 0;
-        foreach ($values as $name => $value) {
-            $params[':p_' . $i] = $value;
-            $i++;
-        }
-
-        return $params;
+        $this->data['where']  = [];
+        $this->data['params'] = [];
+        $this->data['select'] = '*';
+        $this->data['join']   = [];
+        $this->data['order']  = null;
+        $this->data['start']  = null;
+        $this->data['limit']  = null;
+        return $this;
     }
 
-    public function count()
+    public function count(): int
     {
-        $querySql = "SELECT count(" . $this->primaryKey . ") FROM `{$this->table}` WHERE " . $this->getWhere();
-        $result = Query::query($querySql, $this->data['params'], $this->data['connectionId']);
+        $this->querySql = "SELECT count(" . $this->primaryKey .
+            ") FROM `{$this->getTableName()}` `{$this->getTableAlias()}` WHERE " . $this->getWhere();
+
+        $result = $this->exec();
 
         if (!$result) {
-            return false;
+            return 0;
         }
 
         list($count) = $result->fetch(\PDO::FETCH_NUM);
         return $count;
     }
 
-    /**
-     * Inserir registro
-     *
-     * @param Array $values Valores dos campos [nome => valor]
-     *
-     * @return Boolean|Int False se erro  ou Retorna o id do registro
-     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
-     * @version 1.0
-     */
-    public function insert($values)
+    public function insert($values, $returnInsertId = true)
     {
-        $keys = [];
-        foreach ($values as $key => $value) {
-            $keys[] = "`{$key}`";
+        if (empty($values)) {
+            return false;
         }
-        $values = $this->valuesToParams($values);
+        $this->pushBufferData();
+        $fields = [];
         $keysParams = [];
-        foreach ($values as $key => $value) {
-            $keysParams[] = "{$key}";
-        }
-
-        $this->data['params'] = $values;
-
-        $this->querySql = "INSERT INTO `{$this->table}` (" . implode(",", $keys) . ") VALUES (" . implode(",", $keysParams) . ")";
-        $this->exec();
-        $pdo = Connection::connect($this->data['connectionId']);
-        return ((!$pdo) ? false : $pdo->lastInsertId());
-    }
-
-    /**
-     *
-     *
-     * @param Array $values Valores dos campos [nome => valor]
-     * @param Int $id Id que será alterado ou se null pegar do where
-     *
-     * @return void
-     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
-     * @version 1.0
-     */
-    public function update($values, $id = null)
-    {
         $params = [];
         $i = 0;
-        $valores = [];
-        foreach ($values as $name => $value) {
+        foreach ($values as $field => $value) {
+            $fields[] = $field;
+            $keysParams[] = ':p_' . $i;
             $params[':p_' . $i] = $value;
-            $valores[] = "`$name` = :p_" . $i;
             $i++;
         }
 
-        if (!isset($this->data['params']) || is_null($this->data['params'])) {
-            $this->data['params'] = [];
+        $this->data['params'] = $params;
+
+        $this->querySql = "INSERT INTO `{$this->getTableName()}` (" .
+            implode(",", $fields) .
+            ") VALUES (" .
+            implode(",", $keysParams) . ")";
+
+        if ($this->exec() === false) {
+            $this->backBufferData();
+            return false;
         }
-        $this->data['params'][] = $params;
-
-        if (!is_null($id)) {
-            $this->where($this->primaryKey . ' = ' . intval($id), $params);
+        if (!$returnInsertId) {
+            $this->backBufferData();
+            return true;
         }
-
-        $this->querySql = "UPDATE `{$this->table}` SET " . implode(", ", $valores) . " WHERE " . $this->getWhere();
-
-        return (!$this->exec()) ? false : true;
+        $pdo = Connection::connect($this->data['connId']);
+        $result = ((!$pdo) ? false : $pdo->lastInsertId());
+        $this->backBufferData();
+        return $result;
     }
 
-    /**
-     * Deletar usando o Where
-     *
-     * @return boolean true de deletado com successo
-     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
-     * @version 1.0
-     */
-    public function delete()
+    public function update($values, $id = null)
     {
-        $this->querySql = "DELETE FROM `{$this->table}` WHERE " . $this->getWhere();
+        if (empty($values)) {
+            return false;
+        }
+        $this->pushBufferData();
+        $valuesSet = '';
+        $separator = '';
+        $i = 0;
+        $params = [];
+        foreach ($values as $field => $value) {
+            $valuesSet .= "{$separator}{$field} = :p_{$i}";
+            $params[':p_' . $i] = $value;
+            $separator = ', ';
+            $i++;
+        }
+        $this->data['params'] = array_merge($this->data['params'], $params);
+        if (!is_null($id)) {
+            $this->where($this->getPrivateKey() . ' = ?', [intval($id)]);
+        }
+        $this->querySql = "UPDATE `{$this->getTableName()}` SET {$valuesSet} WHERE " . $this->getWhere();
+
+        $this->addQueryOrder();
+        $this->addQueryLimit();
+        $result = (!$this->exec()) ? false : true;
+        $this->backBufferData();
+        return $result;
+    }
+
+    public function delete($id = null): bool
+    {
+        if (!is_null($id)) {
+            $this->where($this->getPrivateKey() . ' = ?', [intval($id)]);
+        }
+        $this->querySql = "DELETE FROM `{$this->getTableName()}` WHERE " . $this->getWhere();
+        $this->addQueryOrder();
+        $this->addQueryLimit();
         return (!$this->exec()) ? false : true;
     }
 
@@ -241,9 +331,9 @@ class QueryBuilder
     /**
      * Traz um registro por id
      *
-     * @param String|Int $id Id dao registro
+     * @param string|int $id Id dao registro
      *
-     * @return Record|Boolean False de nao encontrar
+     * @return Record|boolean False de nao encontrar
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
@@ -257,127 +347,118 @@ class QueryBuilder
     }
 
     /**
-     * Traz um registro por parametro
+     * Traz primeiro registro por parametros
      *
-     * @param Array|String $params Array com os valores ou um Where(String)
-     * Exemplo: ['active' => 1] ou 'active = 1'
+     * @param array|string $params params para where
      *
-     * @return Record|Boolean False de nao encontrar
+     * @return Record|boolean False de nao encontrar
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
     public function findBy($params = [])
     {
-        $bindData = [];
+        $this->pushBufferData();
         if (is_string($params)) {
             if (!empty($params)) {
-                $where = $params;
-                $this->andWhere($where, []);
+                $this->andWhere($params, []);
             }
         } else {
             $i = 0;
             $where = [];
+            $bindData = [];
             foreach ($params as $name => $value) {
                 $bindData[':p_' . $i] = $value;
                 $where[] = "`$name` = :p_" . $i;
                 $i++;
             }
             if (empty($where)) {
-                $where = [1];
-            } else {
-                $where = implode(' AND ', $where);
-                $this->andWhere($where, $bindData);
+                $where = ['1=1'];
             }
+            $where = implode(' AND ', $where);
+            $this->andWhere($where, $bindData);
         }
 
         $this->limit(1);
 
-        $res = $this->get();
+        $res = $this->getAll();
+        $this->backBufferData();
 
-        if (!$res || $res->rowCount() == 0) {
+        if (!$res) {
             return false;
         }
 
-        $model = Connection::getRequireModel($this->table);
-        if (!$model) {
-            $model = "\\Bmodel\\Record";
-        }
-        $res->setFetchMode(\PDO::FETCH_CLASS | \PDO::FETCH_PROPS_LATE, $model);
         return $res->fetch();
-    }
-
-    /**
-     * Traz um registro e Apaga
-     *
-     * @param String|Int $id Id dao registro
-     *
-     * @return Record|Boolean False de nao encontrar ou não apagar
-     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
-     * @version 1.0
-     */
-    public function findDelete($id)
-    {
-        $this->querySql = "DELETE FROM `{$this->table}` WHERE " . $this->primaryKey . " = {$id}";
-        return (!$this->exec()) ? false : true;
     }
 
     public function get()
     {
         if (is_null($this->data['select']) || empty($this->data['select'])) {
             $fields = "*";
-        } elseif (is_string($this->data['select'])) {
-            $fields = $this->data['select'];
         } else {
-            $fields = "";
-            $sep = '';
-            foreach ($this->data['select'] as $campo) {
-                $fields .= $sep . $campo;
-                $sep = ',';
-            }
+            $fields = $this->data['select'];
         }
-        $this->querySql = "SELECT {$fields} FROM `{$this->table}` WHERE " . $this->getWhere();
 
-        if (!is_null($this->order)) {
-            $this->querySql .= " ORDER BY " . $this->order;
+        $joins = '';
+
+        foreach ($this->data['join'] as $join) {
+            $joins .= "{$join->type} JOIN `{$join->table}` `{$join->name}` ON {$join->on} ";
         }
-        if (!is_null($this->limit)) {
-            if (!is_null($this->start)) {
-                $this->querySql .= " LIMIT " . $this->start . "," . $this->limit;
-            } else {
-                $this->querySql .= " LIMIT " . $this->limit;
-            }
-        }
+        $this->querySql = "SELECT {$fields} FROM `{$this->getTableName()}` `{$this->getTableAlias()}` "
+            . $joins
+            . "WHERE " . $this->getWhere();
+
+        $this->addQueryOrder();
+        $this->addQueryLimit();
         return $this->exec();
     }
 
-    public function getAll($type = 0)
+    /**
+     * Execulta select e traz todos resultados
+     *
+     * @return ResultsQuery|boolean False se erro
+     */
+    public function getAll()
     {
+        $connId = $this->data['connId'];
         $res = $this->get();
         if (!$res || $res->rowCount() == 0) {
             return false;
         }
 
-        $model = Connection::getRequireModel($this->table);
-        if (!$model) {
-            $model = "\\Bmodel\\Record";
-        }
-
-        $res->setFetchMode(\PDO::FETCH_CLASS | \PDO::FETCH_PROPS_LATE, $model);
         return new ResultsQuery(
-            $res->fetchAll(),
+            $res,
+            $this->getTableName(),
+            $this->getPrivateKey(),
             $this->querySql,
-            $this->data['params'],
-            $this->getPrimaryKey()
+            $connId
         );
-        // return $res->fetchAll(\PDO::FETCH_CLASS, $model);
     }
 
-    public function exec()
+    private function addQueryOrder()
     {
-        return Query::query(
-            $this->querySql,
-            $this->data['params'],
-            $this->data['connectionId']
-        );
+        $order = $this->data['order'] ?? null;
+        if (!is_null($order)) {
+            $this->querySql .= " ORDER BY {$order}";
+        }
+    }
+    private function addQueryLimit()
+    {
+        $start = $this->data['start'] ?? null;
+        $limit = $this->data['limit'] ?? null;
+        if (!is_null($start)) {
+            $this->querySql .= " LIMIT {$start}";
+            if (!is_null($limit)) {
+                $this->querySql .= ", {$limit}";
+            }
+        }
+    }
+
+    private function exec()
+    {
+        $result = Query::query($this->querySql, $this->getBindParams(), $this->data['connId']);
+        if ($this->data['clearOnExec']) {
+            $this->clearData();
+        }
+        return $result;
     }
 }

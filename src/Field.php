@@ -25,13 +25,20 @@ class Field
     public const TYPE_DATE     = 4;
     public const TYPE_DATETIME = 5;
     public const TYPE_TIME     = 6;
-    public const TYPE_HIDDEN = 7;
-    public const TYPE_BOOLEAN = 8;
+    public const TYPE_HIDDEN   = 7;
+    public const TYPE_BOOLEAN  = 8;
     public const TYPE_COLORRGB = 9;
 
 
     public function __construct($columnMeta)
     {
+        $patterns = [
+            'integer' => '/^([-])?[0-9]+$/',
+            'float' => '/^([-])?[0-9]+([.][0-9]+)?$/',
+            'datetime' => '/^[12][0-9]{3}-([0][0-9]|[1][0-2])-([0-2][0-9]|[3][01]) (([0-1][0-9]|[2][0-3])[:][0-5][0-9][:][0-5][0-9])?$/',
+            'date' => '/^[12][0-9]{3}-([0][0-9]|[1][0-2])-([0-2][0-9]|[3][01])$/',
+            'time' => '/^([0-1][0-9]|[2][0-3])[:][0-5][0-9][:][0-5][0-9]$/',
+        ];
         $this->table = $columnMeta['table'] ?? null;
         $this->name = $columnMeta['name'] ?? null;
         $this->label = $this->name;
@@ -43,26 +50,26 @@ class Field
         switch (strtolower($this->nativeType)) {
             case 'integer':// -9999
                 $this->type = self::TYPE_INTEGER;
-                $this->pattern = '/^([-])?[0-9]+$/';
+                $this->pattern = $patterns['integer'];
                 break;
             case 'number':// -9999.99
             case 'float':
             case 'double':
                 $this->type = self::TYPE_FLOAT;
-                $this->pattern = '/^([-])?[0-9]+([.][0-9]+)?$/';
+                $this->pattern = $patterns['float'];
                 break;
             case 'timestamp':
             case 'datetime':// 2017-09-26 01:20:59
                 $this->type = self::TYPE_DATETIME;
-                $this->pattern = '/^[12][0-9]{3}-([0][0-9]|[1][0-2])-([0-2][0-9]|[3][01]) (([0-1][0-9]|[2][0-3])[:][0-5][0-9][:][0-5][0-9])?$/';
+                $this->pattern = $patterns['datetime'];
                 break;
             case 'date':// 2017-09-26
                 $this->type = self::TYPE_DATE;
-                $this->pattern = '/^[12][0-9]{3}-([0][0-9]|[1][0-2])-([0-2][0-9]|[3][01])$/';
+                $this->pattern = $patterns['date'];
                 break;
             case 'time':// 01:20:59
                 $this->type = self::TYPE_TIME;
-                $this->pattern = '/^([0-1][0-9]|[2][0-3])[:][0-5][0-9][:][0-5][0-9]$/';
+                $this->pattern = $patterns['time'];
                 break;
             case 'blob':
                 $this->type = self::TYPE_TEXT;

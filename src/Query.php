@@ -8,72 +8,75 @@ class Query
 {
     public static $printQuery = false;
     public static $queryString = '';
+    public static $tables = [];
     /**
      * Begin transaction
      *
-     * @param String|Int $connectionsId Id da conexao
+     * @param String|Int $connId Id da conexao
      *
      * @return Boolean
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function beginTransaction($connectionsId = null)
+    public static function beginTransaction($connId = null)
     {
-        $pdo = Connection::connect($connectionsId);
+        $pdo = Connection::connect($connId);
         return $pdo->beginTransaction();
     }
     /**
      * Commit transaction
      *
-     * @param String|Tnt $connectionsId Id da conexao
+     * @param String|Tnt $connId Id da conexao
      *
      * @return Boolean
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function commit($connectionsId = null)
+    public static function commit($connId = null)
     {
-        $pdo = Connection::connect($connectionsId);
+        $pdo = Connection::connect($connId);
         return $pdo->commit();
     }
     /**
      * Rollback transaction
      *
-     * @param String|Int $connectionsId Id da conexao
+     * @param String|Int $connId Id da conexao
      *
      * @return Boolean
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function rollBack($connectionsId = null)
+    public static function rollBack($connId = null)
     {
-        $pdo = Connection::connect($connectionsId);
+        $pdo = Connection::connect($connId);
         return $pdo->rollBack();
     }
     /** Execulta query sql
      *
      * @param string $sql
      * @param array $bindData Array com os valores para o bind.
-     * @param int $connectionsId Id da connection DEFAULT=NULL
+     * @param int $connId Id da connection DEFAULT=NULL
      * @param boolean $reconnect Reconecta quando falha DEFAULT=true
      * @throws \Exception
      * @return boolean|\PDOStatement
      */
-    public static function query($sql, $bindData = null, $connectionsId = null, $reconnect = true)
+    public static function query($sql, $bindData = null, $connId = null, $reconnect = true)
     {
         if (Query::$printQuery) {
             echo "SQL: " . $sql . "<br />\r\n";
         }
 
-        $pdo = Connection::connect($connectionsId);
+        $pdo = Connection::connect($connId);
         if (is_null($bindData) || !is_array($bindData) || empty($bindData)) {
             self::$queryString = $sql;
             if (!$query = $pdo->query($sql)) {
                 list($handle, $codError, $StrError) = $pdo->errorInfo();
 
-                if ($codError == 2006) {
-                    Connection::connect($connectionsId, true, true);
-                    return self::query($sql, $bindData, $connectionsId, false);
+                $codError = intval($codError);
+
+                if ($reconnect && $codError == 2006) {
+                    Connection::connect($connId, true);
+                    return self::query($sql, $bindData, $connId, false);
                 }
 
                 throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n" . $sql, $codError);
@@ -83,11 +86,13 @@ class Query
             $query = $pdo->prepare($sql);
             if (!$query->execute($bindData)) {
                 list($handle, $codError, $StrError) = $query->errorInfo();
+
+                $codError = intval($codError);
                 self::$queryString = $query->queryString;
 
-                if ($codError == 2006) {
-                    Connection::connect($connectionsId, true, true);
-                    return self::query($sql, $bindData, $connectionsId, false);
+                if ($reconnect && $codError == 2006) {
+                    Connection::connect($connId, true);
+                    return self::query($sql, $bindData, $connId, false);
                 }
 
                 throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n", $codError);
@@ -99,26 +104,101 @@ class Query
         return $query;
     }
 
+    public static function isTable($table, $connId = null)
+    {
+        $connId = is_null($connId) ? 0 : $connId;
+        if (isset(static::$tables[$connId]) && isset(static::$tables[$connId][$table])) {
+            return true;
+        }
+
+        $pdo = Connection::connect($connId);
+        $result = $pdo->query("SHOW TABLES");
+        if (!isset(static::$tables[$connId])) {
+            static::$tables[$connId] = [];
+        }
+        while ($row = $result->fetch()) {
+            $tableCurrent = $row[0];
+            if (!isset(static::$tables[$connId][$tableCurrent])) {
+                static::$tables[$connId][$tableCurrent] = [];
+            }
+        }
+
+        return (isset(static::$tables[$connId]) && isset(static::$tables[$connId][$table]));
+    }
+
+    /**
+     * Pega lista de campos no banco de dados
+     *
+     * @param String $tableName
+     * @param integer $type Tipo de retorno, 0 para array de Bmodel\Field / 1 para array de string
+     *
+     * @throws \Exception
+     * @return Array
+     * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
+     * @version 1.0
+     */
+    public static function getFieldsFromDB($tableName, $type = 0, $connId = null)
+    {
+        $connId = is_null($connId) ? 0 : $connId;
+
+        if (isset(static::$tables[$connId][$tableName]) && count(static::$tables[$connId][$tableName]) > 0) {
+            if ($type == 1) {
+                return array_map(function ($field) {
+                    return $field->getName();
+                }, static::$tables[$connId][$tableName]);
+            }
+            return static::$tables[$connId][$tableName];
+        }
+
+        if (is_null($tableName) || !static::isTable($tableName, $connId)) {
+            throw new \Exception("Table '{$tableName}' not exists");
+        }
+        $result = Query::query("SELECT * FROM `{$tableName}` WHERE 0 LIMIT 1", null, $connId);
+        $c = $result->columnCount();
+        $fields = [];
+        for ($i = 0; $i < $c; $i++) {
+            $f = $result->getColumnMeta($i);
+            $fields[$f['name']] = new Field($f);
+        }
+        static::$tables[$connId][$tableName] = $fields;
+
+        if ($type == 1) {
+            return array_map(function ($field) {
+                return $field->getName();
+            }, static::$tables[$connId][$tableName]);
+        }
+
+        return static::$tables[$connId][$tableName];
+    }
+
     /**
      * Pegar obj Table
      *
      * @param String $table Nome da tabela no formato PascalCase ou snake_case
      * @param String $alias Alias da tabela
      * @param String $primaryKey Campo primary key da tabela
+     * @param String $connId ConnectionId
      *
      * @return Table
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getTable($table, $alias = null, $primaryKey = 'id')
+    public static function getTable($table, $alias = null, $primaryKey = 'id', $connId = null)
     {
-        // if (is_null($alias)) $alias = Commons::snake_case($table);
-        $objTable = Connection::getTable($table);
-        if (!$objTable) {
-            return Table::createPseudo($table);
+        if ($model = Connection::searchModel($table)) {
+            $connId = is_null($connId) ? $model->connId : $connId;
+            $classModel = $model->classModel;
+            require_once $model->file;
+            $t = new $classModel();
+            $t->setConf($table, $alias, $primaryKey, $connId);
+            return $t;
         }
-        $objTable->setPrimaryKey($primaryKey);
+        if (!self::isTable($table, $connId)) {
+            throw new \Exception("Table '{$table}' not exists");
+        }
 
-        return $objTable;
+        $t = new Table();
+        $t->setConf($table, $alias, $primaryKey, $connId);
+        return $t;
     }
 }
