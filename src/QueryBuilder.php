@@ -2,7 +2,7 @@
 
 namespace Bmodel;
 
-class QueryBuilder
+class QueryBuilder extends Table
 {
     private $data = [];
     private $bufferData = [];
@@ -42,21 +42,10 @@ class QueryBuilder
         return $this;
     }
 
-    public function setPrimaryKey(string $name)
-    {
-        $this->data['privateKey'] = $name;
-        return $this;
-    }
-
     public function setClearOnExec($clearOnExec = true)
     {
         $this->data['clearOnExec'] = $clearOnExec;
         return $this;
-    }
-
-    public function getPrivateKey()
-    {
-        return $this->data['privateKey'] ?? null;
     }
 
     public function getQuerySql(): string
@@ -84,33 +73,6 @@ class QueryBuilder
     public function getBindParams(): array
     {
         return $this->data['params'] ?? [];
-    }
-
-    public function setTableName($tableName, $tableAlias = null)
-    {
-        $this->data['table'] = $tableName;
-        $this->data['tableAlias'] = $tableAlias;
-        return $this;
-    }
-
-    public function getTableName()
-    {
-        return $this->data['table'] ?? null;
-    }
-
-    public function getTableAlias()
-    {
-        return $this->data['tableAlias'] ?? null;
-    }
-
-    public function setConnectionId($connId = null)
-    {
-        $this->data['connId'] = $connId;
-        return $this;
-    }
-    public function getConnectionId()
-    {
-        return $this->data['connId'];
     }
 
     public function select($fields = null)
@@ -236,8 +198,23 @@ class QueryBuilder
 
     public function count(): int
     {
-        $this->querySql = "SELECT count(" . $this->primaryKey .
-            ") FROM `{$this->getTableName()}` `{$this->getTableAlias()}` WHERE " . $this->getWhere();
+        $joins = '';
+
+        foreach ($this->data['join'] as $join) {
+            $tableJoin = "`{$join->table}`";
+            $tableAlias = $join->name;
+            if (!is_null($tableAlias) && !empty($tableAlias)) {
+                $tableJoin .= " `{$tableAlias}`";
+            }
+            $joins .= "{$join->type} JOIN {$tableJoin} ON {$join->on} ";
+        }
+        $table = "`{$this->getTableName()}`";
+        $tableAlias = $this->getTableAlias();
+        if (!is_null($tableAlias) && !empty($tableAlias)) {
+            $table .= " `{$tableAlias}`";
+        }
+        $this->querySql = "SELECT count(" . $this->getPrimaryKey() .
+            ") FROM {$table} {$joins}WHERE " . $this->getWhere();
 
         $result = $this->exec();
 
@@ -281,7 +258,7 @@ class QueryBuilder
             $this->backBufferData();
             return true;
         }
-        $pdo = Connection::connect($this->data['connId']);
+        $pdo = $this->getConn();
         $result = ((!$pdo) ? false : $pdo->lastInsertId());
         $this->backBufferData();
         return $result;
@@ -305,7 +282,7 @@ class QueryBuilder
         }
         $this->data['params'] = array_merge($this->data['params'], $params);
         if (!is_null($id)) {
-            $this->where($this->getPrivateKey() . ' = ?', [intval($id)]);
+            $this->where($this->getPrimaryKey() . ' = :id', [':id' => $id]);
         }
         $this->querySql = "UPDATE `{$this->getTableName()}` SET {$valuesSet} WHERE " . $this->getWhere();
 
@@ -319,7 +296,7 @@ class QueryBuilder
     public function delete($id = null): bool
     {
         if (!is_null($id)) {
-            $this->where($this->getPrivateKey() . ' = ?', [intval($id)]);
+            $this->where($this->getPrimaryKey() . ' = :id', [':id' => $id]);
         }
         $this->querySql = "DELETE FROM `{$this->getTableName()}` WHERE " . $this->getWhere();
         $this->addQueryOrder();
@@ -342,7 +319,7 @@ class QueryBuilder
         if (is_null($id)) {
             return $this->findBy();
         } else {
-            return $this->findBy([$this->primaryKey => $id]);
+            return $this->findBy([$this->getPrimaryKey() => $id]);
         }
     }
 
@@ -401,9 +378,19 @@ class QueryBuilder
         $joins = '';
 
         foreach ($this->data['join'] as $join) {
-            $joins .= "{$join->type} JOIN `{$join->table}` `{$join->name}` ON {$join->on} ";
+            $tableJoin = "`{$join->table}`";
+            $tableAlias = $join->name;
+            if (!is_null($tableAlias) && !empty($tableAlias)) {
+                $tableJoin .= " `{$tableAlias}`";
+            }
+            $joins .= "{$join->type} JOIN {$tableJoin} ON {$join->on} ";
         }
-        $this->querySql = "SELECT {$fields} FROM `{$this->getTableName()}` `{$this->getTableAlias()}` "
+        $table = "`{$this->getTableName()}`";
+        $tableAlias = $this->getTableAlias();
+        if (!is_null($tableAlias) && !empty($tableAlias)) {
+            $table .= " `{$tableAlias}`";
+        }
+        $this->querySql = "SELECT {$fields} FROM {$table} "
             . $joins
             . "WHERE " . $this->getWhere();
 
@@ -419,7 +406,7 @@ class QueryBuilder
      */
     public function getAll()
     {
-        $connId = $this->data['connId'];
+        $connId = $this->getConnectionId();
         $res = $this->get();
         if (!$res || $res->rowCount() == 0) {
             return false;
@@ -428,9 +415,10 @@ class QueryBuilder
         return new ResultsQuery(
             $res,
             $this->getTableName(),
-            $this->getPrivateKey(),
-            $this->querySql,
-            $connId
+            $this->getTableAlias(),
+            $this->getPrimaryKey(),
+            $connId,
+            $this->querySql
         );
     }
 
@@ -450,15 +438,33 @@ class QueryBuilder
             if (!is_null($limit)) {
                 $this->querySql .= ", {$limit}";
             }
+        } elseif (!is_null($limit)) {
+            $this->querySql .= " LIMIT {$limit}";
         }
     }
 
     private function exec()
     {
-        $result = Query::query($this->querySql, $this->getBindParams(), $this->data['connId']);
+        $result = Query::query($this->querySql, $this->getBindParams(), $this->getConnectionId());
         if ($this->data['clearOnExec']) {
             $this->clearData();
         }
         return $result;
+    }
+
+    public function beginTransaction()
+    {
+        $this->getConn()->beginTransaction();
+        return $this;
+    }
+
+    public function commit()
+    {
+        return $this->getConn()->commit();
+    }
+
+    public function rollBack()
+    {
+        return $this->getConn()->rollBack();
     }
 }

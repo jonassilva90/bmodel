@@ -2,40 +2,19 @@
 
 namespace Bmodel;
 
-class Record
+class Record extends QueryBuilder
 {
-    private $table;
-    private $connId;
-    private $primaryKey = 'id';
     private $data = [];
     private $paramsSet = [];
-    public function setPrimaryKey($name)
-    {
-        $this->primaryKey = $name;
-    }
-    public function getPrimaryKey()
-    {
-        return $this->primaryKey;
-    }
-    public function setTableName($tableName)
-    {
-        $this->table = $tableName;
-    }
-    public function getTableName()
-    {
-        return $this->table;
-    }
-    public function setConnectionId($connId)
-    {
-        $this->connId = $connId;
-    }
-    public function getConnectionId()
-    {
-        return $this->connId;
-    }
-    public function setData($data = [])
+    public function setData($data = [], $setParamsUpdate = false)
     {
         $this->data = $data;
+        $this->paramsSet = [];
+        if ($setParamsUpdate) {
+            foreach ($data as $field => $value) {
+                $this->paramsSet[] = $field;
+            }
+        }
     }
 
     public function __set($name, $value = null)
@@ -47,25 +26,15 @@ class Record
     public function __get($name)
     {
         if (!array_key_exists($name, $this->data)) {
-            throw new \Exception("Campo '{$name}' não existe na tabela '$this->table'");
+            throw new \Exception("Campo '{$name}' não existe na tabela '$this->getTableName()'");
         }
         return $this->data[$name];
     }
 
-    private function getQueryBuilder(): QueryBuilder
-    {
-        $q = new QueryBuilder();
-        $q->setPrimaryKey($this->getPrimaryKey());
-        $q->setTableName($this->getTableName());
-        $q->setConnectionId($this->getConnectionId());
-        return $q;
-    }
-
     public function save()
     {
-        $q = $this->getQueryBuilder();
 
-        $primaryKey = $this->primaryKey;
+        $primaryKey = $this->getPrimaryKey();
         $primaryKeyValue = $this->data[$primaryKey] ?? null;
         if (is_null($primaryKeyValue)) {
             $data = array_filter(
@@ -75,18 +44,18 @@ class Record
                 },
                 ARRAY_FILTER_USE_KEY
             );
-            $primaryKeyValue = $q->insert($data);
+            $primaryKeyValue = $this->insert($data);
             $result = !!$primaryKeyValue;
             if ($result) {
                 $this->data[$primaryKey] = $primaryKeyValue;
             }
-            $this->data = $q->find($primaryKeyValue)->toArray();
-            return $result;
+            // $this->data = $q->find($primaryKeyValue)->toArray();
+            return $primaryKeyValue;
         }
 
         $data = [];
         foreach ($this->paramsSet as $fieldName) {
-            if ($fieldName != $primaryKey) {
+            if ($fieldName == $primaryKey) {
                 continue;
             }
 
@@ -95,16 +64,16 @@ class Record
             }
         }
 
-        return $q->update($data, $primaryKeyValue);
+        return $this->update($data, $primaryKeyValue);
     }
 
-    public function delete(): bool
+    public function deleteRecord(): bool
     {
-        $primaryKey = $this->primaryKey;
+        $primaryKey = $this->getPrimaryKey();
         if (!isset($this->data[$primaryKey]) || is_null($this->data[$primaryKey])) {
             return false;
         }
-        return $this->getQueryBuilder()->delete($this->data[$primaryKey]);
+        return $this->delete($this->data[$primaryKey]);
     }
 
     public function toArray()

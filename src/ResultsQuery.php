@@ -11,18 +11,21 @@ class ResultsQuery implements \IteratorAggregate
     private $pdoStat;
     private $querySql;
     private $tableName;
+    private $tableAlias;
     private $primaryKey = 'id';
     private $connId;
     public function __construct(
         \PDOStatement $pdoStat,
         string $tableName,
+        $tableAlias = null,
         string $primaryKey = 'id',
-        string $querySql = '',
-        int $connId = 0
+        int $connId = 0,
+        string $querySql = ''
     ) {
         $this->querySql = $querySql;
         $this->pdoStat = $pdoStat;
         $this->tableName = $tableName;
+        $this->tableAlias = $tableAlias;
         $this->primaryKey = $primaryKey;
         $this->connId = $connId;
     }
@@ -48,11 +51,13 @@ class ResultsQuery implements \IteratorAggregate
             return false;
         }
 
-        $record = new Record();
+        $record = Query::getTable(
+            $this->tableName,
+            $this->tableAlias,
+            $this->primaryKey,
+            $this->connId
+        );
         $record->setData($row);
-        $record->setTableName($this->tableName);
-        $record->setPrimaryKey($this->primaryKey);
-        $record->setConnectionId($this->connId);
         return $record;
     }
 

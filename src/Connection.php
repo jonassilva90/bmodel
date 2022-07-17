@@ -82,7 +82,7 @@ class Connection
         return self::$connections[$connId];
     }
 
-    public static function addModelPath($modelPath, $modelNamespace, $connId = null)
+    public static function addModelPath($modelPath, $modelNamespace, $connId = 0)
     {
         $modelPath = str_replace(['/','\\'], DIRECTORY_SEPARATOR, $modelPath);
         $modelNamespace = str_replace('/', '\\', $modelNamespace);
@@ -100,6 +100,16 @@ class Connection
         foreach (static::$modelsPaths as $obj) {
             $file = $obj->path . DIRECTORY_SEPARATOR . $modelName . ".php";
             $classPath = $obj->namespace . '\\' . $modelName;
+            $classPath = str_replace('/', '\\', $classPath);
+            if (is_file($file)) {
+                return (object)[
+                    'file' => $file,
+                    'classModel' => $classPath,
+                    'connId' => $obj->connId
+                ];
+            }
+            $file = $obj->path . DIRECTORY_SEPARATOR . $modelName . "Table.php";
+            $classPath = $obj->namespace . '\\' . $modelName . "Table";
             $classPath = str_replace('/', '\\', $classPath);
             if (is_file($file)) {
                 return (object)[

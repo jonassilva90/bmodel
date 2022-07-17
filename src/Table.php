@@ -2,23 +2,15 @@
 
 namespace Bmodel;
 
-class Table extends QueryBuilder
+class Table
 {
-    protected $connectionId;
-    protected $table;
-    protected $tableAlias;
-    protected $primaryKey = 'id';
+    private $connectionId = 0;
+    private $table;
+    private $tableAlias;
+    private $primaryKey = 'id';
     private $fields = [];
     private $relations = [];
-    public static $fieldsGlobal = [];
-    public function __construct()
-    {
-        $this->setTableName($this->table, $this->tableAlias);
-        $this->setPrimaryKey($this->primaryKey);
-        $this->setConnectionId($this->connectionId);
-        parent::__construct();
-    }
-    public function setConf($tableName = null, $tableAlias = null, $primaryKey = null, $connId = null)
+    public function setConf($tableName = null, $tableAlias = null, $primaryKey = null, int $connId = 0)
     {
         $this->setConnectionId($connId);
         $this->setTableName($tableName, $tableAlias);
@@ -26,10 +18,45 @@ class Table extends QueryBuilder
         $this->defineFields();
         $this->defineRelations();
     }
-    public function getTable()
+
+    public function setConnectionId(int $connId)
     {
-        return $this->getTableName();
+        $this->connectionId = $connId;
+        return $this;
     }
+
+    public function getConnectionId(): int
+    {
+        return $this->connectionId;
+    }
+
+    public function setPrimaryKey(string $name)
+    {
+        $this->primaryKey = $name;
+        return $this;
+    }
+
+    public function getPrimaryKey()
+    {
+        return $this->primaryKey;
+    }
+
+    public function setTableName($table, $tableAlias = null)
+    {
+        $this->table = $table;
+        $this->tableAlias = $tableAlias;
+    }
+
+    public function getTableName()
+    {
+        return $this->table;
+    }
+
+    public function getTableAlias()
+    {
+        return $this->tableAlias;
+    }
+
     public function getFields()
     {
         return $this->fields;
@@ -40,7 +67,7 @@ class Table extends QueryBuilder
     }
     public function defineFields()
     {
-        $this->fields = Query::getFieldsFromDB($this->getTableName(), 0, $this->getConnectionId());
+        // $this->fields = Query::getFieldsFromDB($this->getTableName(), 0, $this->getConnectionId());
     }
     public function defineRelations()
     {

@@ -64,6 +64,7 @@ class Query
     {
         if (Query::$printQuery) {
             echo "SQL: " . $sql . "<br />\r\n";
+            echo "<pre>" . json_encode($bindData, JSON_PRETTY_PRINT) . "</pre>";
         }
 
         $pdo = Connection::connect($connId);
@@ -179,11 +180,11 @@ class Query
      * @param String $primaryKey Campo primary key da tabela
      * @param String $connId ConnectionId
      *
-     * @return Table
+     * @return Model
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getTable($table, $alias = null, $primaryKey = 'id', $connId = null)
+    public static function getTable($table, $alias = null, $primaryKey = 'id', $connId = null): Model
     {
         if ($model = Connection::searchModel($table)) {
             $connId = is_null($connId) ? $model->connId : $connId;
@@ -193,11 +194,16 @@ class Query
             $t->setConf($table, $alias, $primaryKey, $connId);
             return $t;
         }
+
+        if (is_null($connId)) {
+            $connId = 0;
+        }
+
         if (!self::isTable($table, $connId)) {
             throw new \Exception("Table '{$table}' not exists");
         }
 
-        $t = new Table();
+        $t = new Model();
         $t->setConf($table, $alias, $primaryKey, $connId);
         return $t;
     }

@@ -57,6 +57,19 @@ class ConfigConnection
         }
     }
 
+    /**
+     * Cria e adiciona configuracao da conexao
+     *
+     * @param array $data
+     * @return ConfigConnection
+     */
+    public static function add(array $data): ConfigConnection
+    {
+        $c = new ConfigConnection($data);
+        $c->setConnection();
+        return $c;
+    }
+
     public function setConnection()
     {
         Connection::setConnection($this);
