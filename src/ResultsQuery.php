@@ -2,32 +2,37 @@
 
 namespace Bmodel;
 
-class ResultsQuery
+class ResultsQuery implements \IteratorAggregate
 {
-    private $data = [];
-    private $c = -1;
+    /**
+     *
+     * @var \PDOStatement
+     */
+    private $pdoStat;
     private $querySql;
-    private $params = [];
+    private $tableName;
+    private $tableAlias;
     private $primaryKey = 'id';
-    public function __construct($data, $querySql = '', $params = [], $primaryKey = 'id')
-    {
+    private $connId;
+    public function __construct(
+        \PDOStatement $pdoStat,
+        string $tableName,
+        $tableAlias = null,
+        string $primaryKey = 'id',
+        int $connId = 0,
+        string $querySql = ''
+    ) {
         $this->querySql = $querySql;
-        $this->data = $data;
-        $this->params = $params;
+        $this->pdoStat = $pdoStat;
+        $this->tableName = $tableName;
+        $this->tableAlias = $tableAlias;
+        $this->primaryKey = $primaryKey;
+        $this->connId = $connId;
     }
 
-    public function __set($name, $value = null)
+    public function getIterator(): \Iterator
     {
-        $this->data[$name] = $value;
-        $this->_paramsSet[$name] = $value;
-    }
-
-    public function __get($name)
-    {
-        if (!array_key_exists($name, $this->data)) {
-            throw new \Exception("Campo '{$name}' não existe na tabela '$this->_table}'");
-        }
-        return $this->data[$name];
+        return $this->pdoStat->getIterator();
     }
 
     public function getQuerySql()
@@ -35,51 +40,46 @@ class ResultsQuery
         return $this->querySql;
     }
 
-    public function getParams()
-    {
-        return $this->params;
-    }
-
     public function count()
     {
-        return count($this->data);
+        return $this->pdoStat->rowCount();
     }
 
     public function fetch()
     {
-        $this->c++;
-        if (isset($this->data[$this->c])) {
-            $this->data[$this->c]->setPrimaryKey($this->primaryKey);
-            return $this->data[$this->c];
+        if (!$row = $this->pdoStat->fetch(\PDO::FETCH_ASSOC)) {
+            return false;
         }
-        return false;
+
+        $record = Query::getTable(
+            $this->tableName,
+            $this->tableAlias,
+            $this->primaryKey,
+            $this->connId
+        );
+        $record->setData($row);
+        return $record;
     }
 
     public function fetchAll()
     {
-        $primaryKey = $this->primaryKey;
+        $itens = [];
 
-        return array_map(
-            function ($row) use ($primaryKey) {
-                $row->setPrimaryKey($primaryKey);
-                return $row;
-            },
-            $this->data
-        );
+        while ($row = $this->fetch()) {
+            $itens[] = $row;
+        }
+
+        return $itens;
     }
 
     public function toArray()
     {
-        return array_map(function ($v) {
-            return $v->toArray();
-        }, $this->data);
+        return $this->pdoStat->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function toArrayNum()
     {
-        return array_map(function ($v) {
-            return $v->toArrayNum();
-        }, $this->data);
+        return $this->pdoStat->fetchAll(\PDO::FETCH_NUM);
     }
 
     public function toJSON($typeJSON = 0)

@@ -2,118 +2,78 @@
 
 namespace Bmodel;
 
-class Record
+class Record extends QueryBuilder
 {
-    private $table;
-    private $primaryKey = 'id';
-    private $_data;
+    private $data = [];
     private $paramsSet = [];
-    public function __construct()
+    public function setData($data = [], $setParamsUpdate = false)
     {
-        $data = [];
-    }
-    public static function createPseudo($tableName, $data = null, $primaryKey = 'id')
-    {
-        // Criando um pseudo class para a table (quando nao existir o Table)
-        $record = new class () extends Record
-        {
-        };
-        $record->setTableName($tableName);
-        $record->setPrimaryKey($primaryKey);
-        if (!is_null($data)) {
-            $record->setData($data);
-        }
-        $record->reviewFields($data);
-
-        return $record;
-    }
-    public function setPrimaryKey($name)
-    {
-        $this->primaryKey = $name;
-    }
-    public function getPrimaryKey()
-    {
-        return $this->primaryKey;
-    }
-    public function reviewFields()
-    {
-        $data = $this->_data;
-        $table = Query::getTable($this->table, null);
-        $this->primaryKey = $table->getPrimaryKey();
-        $fields = $table->getFieldsFromDB();
-        foreach ($fields as $field => $objField) {
-            if (is_null($data) || !array_key_exists($field, $data)) {
-                $data[$field] = $objField->getDefault();
+        $this->data = $data;
+        $this->paramsSet = [];
+        if ($setParamsUpdate) {
+            foreach ($data as $field => $value) {
+                $this->paramsSet[] = $field;
             }
         }
-        $this->setData($data);
-    }
-    public function setData($data = [])
-    {
-        $this->_data = $data;
     }
 
     public function __set($name, $value = null)
     {
-        $this->_data[$name] = $value;
-        $this->paramsSet[$name] = $value;
+        $this->data[$name] = $value;
+        $this->paramsSet[] = $name;
     }
 
     public function __get($name)
     {
-        if (!array_key_exists($name, $this->_data)) {
-            throw new \Exception("Campo '{$name}' não existe na tabela '$this->table'");
+        if (!array_key_exists($name, $this->data)) {
+            throw new \Exception("Campo '{$name}' não existe na tabela '$this->getTableName()'");
         }
         return $this->_data[$name];
     }
 
-    public function getFields()
-    {
-        return $this->_data;
-    }
-
-    public function setTableName($table)
-    {
-        $this->table = $table;
-    }
-
     public function save()
     {
-        $primaryKey = $this->primaryKey;
-        $table = Query::getTable($this->table, null, $primaryKey);
-        $this->_data[$primaryKey] = $this->_data[$primaryKey] ?? null;
-        if (is_null($this->_data[$primaryKey])) {
-            $dados = array_filter(
-                $this->_data,
-                function ($k) use ($primaryKey){
+
+        $primaryKey = $this->getPrimaryKey();
+        $primaryKeyValue = $this->data[$primaryKey] ?? null;
+        if (is_null($primaryKeyValue)) {
+            $data = array_filter(
+                $this->data,
+                function ($k) use ($primaryKey) {
                     return $k != $primaryKey;
                 },
                 ARRAY_FILTER_USE_KEY
             );
-            $primaryKeyValue =$table->insert($dados);
+            $primaryKeyValue = $this->insert($data);
             $result = !!$primaryKeyValue;
             if ($result) {
                 $this->_data[$primaryKey] = $primaryKeyValue;
             }
-        } else {
-            $result = $table->update($this->paramsSet, $this->_data[$primaryKey]);
+            // $this->data = $q->find($primaryKeyValue)->toArray();
+            return $primaryKeyValue;
         }
 
-        // Refresh data
-        $this->_data = Query::getTable($this->table, null, $primaryKey)->find($this->_data[$primaryKey])->toArray();
+        $data = [];
+        foreach ($this->paramsSet as $fieldName) {
+            if ($fieldName == $primaryKey) {
+                continue;
+            }
 
-        return $result;
+            if (isset($this->data[$fieldName])) {
+                $data[$fieldName] = $this->data[$fieldName];
+            }
+        }
+
+        return $this->update($data, $primaryKeyValue);
     }
 
-    public function delete()
+    public function deleteRecord(): bool
     {
-        $primaryKey = $this->primaryKey;
-        $this->_data[$primaryKey] = $this->_data[$primaryKey] ?? null;
-        if (is_null($this->_data[$primaryKey])) {
+        $primaryKey = $this->getPrimaryKey();
+        if (!isset($this->data[$primaryKey]) || is_null($this->data[$primaryKey])) {
             return false;
         }
-        return Query::getTable($this->table, null, $primaryKey)
-            ->findDelete($this->_data[$primaryKey]);
+        return $this->delete($this->data[$primaryKey]);
     }
 
     public function toArray()
