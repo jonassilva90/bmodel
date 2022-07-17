@@ -28,7 +28,7 @@ class Record extends QueryBuilder
         if (!array_key_exists($name, $this->data)) {
             throw new \Exception("Campo '{$name}' não existe na tabela '$this->getTableName()'");
         }
-        return $this->data[$name];
+        return $this->_data[$name];
     }
 
     public function save()
@@ -47,7 +47,7 @@ class Record extends QueryBuilder
             $primaryKeyValue = $this->insert($data);
             $result = !!$primaryKeyValue;
             if ($result) {
-                $this->data[$primaryKey] = $primaryKeyValue;
+                $this->_data[$primaryKey] = $primaryKeyValue;
             }
             // $this->data = $q->find($primaryKeyValue)->toArray();
             return $primaryKeyValue;
@@ -78,16 +78,16 @@ class Record extends QueryBuilder
 
     public function toArray()
     {
-        return $this->data;
+        return $this->_data;
     }
 
     public function toArrayNum()
     {
-        return array_values($this->data);
+        return array_values($this->_data);
     }
 
     public function toJSON($typeJSON = 0)
     {
-        return json_encode($this->data, $typeJSON);
+        return json_encode($this->_data, $typeJSON);
     }
 }
