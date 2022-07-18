@@ -43,7 +43,7 @@ class Table
 
     public function setTableName($table, $tableAlias = null)
     {
-        $this->table = $table;
+        $this->table = Commons::snakeCase($table);
         $this->tableAlias = $tableAlias;
     }
 

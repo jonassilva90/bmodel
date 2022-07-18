@@ -198,6 +198,7 @@ class Query
         if (is_null($connId)) {
             $connId = 0;
         }
+        $table = Commons::snakeCase($table);
 
         if (!self::isTable($table, $connId)) {
             throw new \Exception("Table '{$table}' not exists");
