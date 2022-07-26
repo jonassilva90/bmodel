@@ -175,23 +175,36 @@ class Query
     /**
      * Pegar obj Table
      *
-     * @param String $table Nome da tabela no formato PascalCase ou snake_case
-     * @param String $alias Alias da tabela
-     * @param String $primaryKey Campo primary key da tabela
-     * @param String $connId ConnectionId
+     * @param string $table Nome da tabela no formato PascalCase ou snake_case
+     * @param string $alias Alias da tabela
+     * @param string $primaryKey Campo primary key da tabela
+     * @param int $connId ConnectionId
      *
      * @return Model
      * @author Jonas Ribeiro <jonasribeiro19@gmail.com>
      * @version 1.0
      */
-    public static function getTable($table, $alias = null, $primaryKey = 'id', $connId = null): Model
+    public static function getTable($table, $alias = null, $primaryKey = null, $connId = null): Model
     {
         if ($model = Connection::searchModel($table)) {
             $connId = is_null($connId) ? $model->connId : $connId;
             $classModel = $model->classModel;
             require_once $model->file;
             $t = new $classModel();
-            $t->setConf($table, $alias, $primaryKey, $connId);
+            if (!is_null($table) && !is_null($alias)) {
+                $t->setTableName($table, $alias);
+            } elseif (!is_null($alias)) {
+                $table = $t->getTableName();
+                $t->setTableName($table, $alias);
+            }
+            if (!is_null($primaryKey)) {
+                $t->setPrimaryKey($primaryKey);
+            }
+            if (!is_null($connId)) {
+                $t->setConnectionId($connId);
+            }
+            $t->defineFields();
+            $t->defineRelations();
             return $t;
         }
 
@@ -202,6 +215,10 @@ class Query
 
         if (!self::isTable($table, $connId)) {
             throw new \Exception("Table '{$table}' not exists");
+        }
+
+        if (is_null($primaryKey)) {
+            $primaryKey = 'id';
         }
 
         $t = new Model();
