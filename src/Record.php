@@ -31,6 +31,15 @@ class Record extends QueryBuilder
         return $this->data[$name];
     }
 
+    public function __isset($name)
+    {
+        if (isset($this->data[$name])) {
+            return (false === empty($this->data[$name]));
+        } else {
+            return null;
+        }
+    }
+
     public function save()
     {
 
