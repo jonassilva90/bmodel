@@ -2,6 +2,7 @@
 
 namespace Bmodel;
 
+#[\AllowDynamicProperties]
 class QueryBuilder extends Table
 {
     private $data = [];
