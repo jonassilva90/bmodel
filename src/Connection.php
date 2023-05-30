@@ -129,7 +129,6 @@ class Connection
 
     public static function addModelPath($modelPath, $modelNamespace, $connId = null)
     {
-        $connId = $connId ?? self::$connIdDefault;
         $modelPath = str_replace(['/','\\'], DIRECTORY_SEPARATOR, $modelPath);
         $modelNamespace = str_replace('/', '\\', $modelNamespace);
         static::$modelsPaths[] = (object)[
@@ -144,6 +143,7 @@ class Connection
         $modelName = Commons::pascalCase($tableName);
 
         foreach (static::$modelsPaths as $obj) {
+            $connId = $obj->connId ?? self::$connIdDefault;
             $file = $obj->path . DIRECTORY_SEPARATOR . $modelName . ".php";
             $classPath = $obj->namespace . '\\' . $modelName;
             $classPath = str_replace('/', '\\', $classPath);
