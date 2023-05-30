@@ -151,7 +151,7 @@ class Connection
                 return (object)[
                     'file' => $file,
                     'classModel' => $classPath,
-                    'connId' => $obj->connId
+                    'connId' => $connId
                 ];
             }
             $file = $obj->path . DIRECTORY_SEPARATOR . $modelName . "Table.php";
@@ -161,7 +161,7 @@ class Connection
                 return (object)[
                     'file' => $file,
                     'classModel' => $classPath,
-                    'connId' => $obj->connId
+                    'connId' => $connId
                 ];
             }
         }
