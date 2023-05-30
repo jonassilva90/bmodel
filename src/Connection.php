@@ -7,6 +7,7 @@ class Connection
     public static $connections = [];
     public static $cfgConnections = [];
     public static $modelsPaths = [];
+    public static $connIdDefault = 0;
     /**
      *
      * @param ConfigConnection $config
@@ -24,6 +25,50 @@ class Connection
         self::$cfgConnections[$config->id] = $config;
         return true;
     }
+
+    public static function addConnection(ConfigConnection $config, $setDefault = true)
+    {
+        $idConn = self::getConnIdByConfigConnection($config);
+        if (is_null($idConn)) {
+            $ids = array_keys(self::$cfgConnections);
+            if (!empty($ids)) {
+                $idConn = max($ids) + 1;
+            } else {
+                $idConn = 0;
+            }
+            $config->id = $idConn;
+            self::setConnection($config);
+        }
+
+        if ($setDefault) {
+            self::setConnIdDefault($idConn);
+        }
+    }
+
+    public static function getConnIdByConfigConnection(ConfigConnection $config): ?int
+    {
+        $id  = $config->id;
+        $dns = $config->getDNS();
+        
+        if (isset(self::$cfgConnections[$id])) {
+            if (self::$cfgConnections[$id]->getDNS() == $dns) {
+                return $id;
+            }
+        }
+        foreach (self::$cfgConnections as $idCurrent=>$configCurrent) {
+            if ($configCurrent->getDNS() == $dns) {
+                return $idCurrent;
+            }
+        }
+
+        return null;
+    }
+
+    public static function setConnIdDefault(int $connId)
+    {
+        self::$connIdDefault = $connId;
+    }
+
     /**
      *
      * @param int $connId Id da connection DEFAULT=NULL
@@ -33,7 +78,7 @@ class Connection
      */
     public static function connect($connId = null, $autoConnect = true)
     {
-        $connId = $connId ?? 0;
+        $connId = $connId ?? self::$connIdDefault;
 
         if (isset(self::$connections[$connId])) {
             return self::$connections[$connId];
@@ -48,15 +93,15 @@ class Connection
             return false;
         }
 
-        $driver = self::$cfgConnections[$connId]->driver;
-        $host = self::$cfgConnections[$connId]->host;
-        $port = self::$cfgConnections[$connId]->port;
-        $dbname = self::$cfgConnections[$connId]->dbname;
-        $username = self::$cfgConnections[$connId]->username;
-        $password = self::$cfgConnections[$connId]->password;
+        $driver     = self::$cfgConnections[$connId]->driver;
+        $host       = self::$cfgConnections[$connId]->host;
+        $port       = self::$cfgConnections[$connId]->port;
+        $dbname     = self::$cfgConnections[$connId]->dbname;
+        $username   = self::$cfgConnections[$connId]->username;
+        $password   = self::$cfgConnections[$connId]->password;
         $persistent = self::$cfgConnections[$connId]->persistent;
-        $charset = self::$cfgConnections[$connId]->charset;
-        $timeZone = self::$cfgConnections[$connId]->timeZone;
+        $charset    = self::$cfgConnections[$connId]->charset;
+        $timeZone   = self::$cfgConnections[$connId]->timeZone;
 
         $options = array();
         $options[\PDO::ATTR_PERSISTENT] = !!$persistent;
@@ -82,8 +127,9 @@ class Connection
         return self::$connections[$connId];
     }
 
-    public static function addModelPath($modelPath, $modelNamespace, $connId = 0)
+    public static function addModelPath($modelPath, $modelNamespace, $connId = null)
     {
+        $connId = $connId ?? self::$connIdDefault;
         $modelPath = str_replace(['/','\\'], DIRECTORY_SEPARATOR, $modelPath);
         $modelNamespace = str_replace('/', '\\', $modelNamespace);
         static::$modelsPaths[] = (object)[

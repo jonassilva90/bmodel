@@ -57,6 +57,11 @@ class ConfigConnection
         }
     }
 
+    public function getDNS(): string
+    {
+        return "{$this->driver};{$this->host}:{$this->port}:{$this->dbname}";
+    }
+
     /**
      * Cria e adiciona configuracao da conexao
      *
@@ -72,6 +77,6 @@ class ConfigConnection
 
     public function setConnection()
     {
-        Connection::setConnection($this);
+        Connection::addConnection($this);
     }
 }
