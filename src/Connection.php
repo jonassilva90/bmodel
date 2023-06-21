@@ -30,14 +30,19 @@ class Connection
     {
         $idConn = self::getConnIdByConfigConnection($config);
         if (is_null($idConn)) {
-            $ids = array_keys(self::$cfgConnections);
-            if (!empty($ids)) {
-                $idConn = max($ids) + 1;
+            if (!is_null($config->id)) {
+                $idConn = $config->id;
+                self::setConnection($config);
             } else {
-                $idConn = 0;
+                $ids = array_keys(self::$cfgConnections);
+                if (!empty($ids)) {
+                    $idConn = max($ids) + 1;
+                } else {
+                    $idConn = 0;
+                }
+                $config->id = $idConn;
+                self::setConnection($config);
             }
-            $config->id = $idConn;
-            self::setConnection($config);
         }
 
         if ($setDefault) {
