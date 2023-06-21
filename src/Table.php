@@ -4,13 +4,13 @@ namespace Bmodel;
 
 class Table
 {
-    private $connectionId = 0;
+    private $connectionId;
     private $table;
     private $tableAlias;
     private $primaryKey = 'id';
     private $fields = [];
     private $relations = [];
-    public function setConf($tableName = null, $tableAlias = null, $primaryKey = null, int $connId = 0)
+    public function setConf($tableName = null, $tableAlias = null, $primaryKey = null, ?int $connId = null)
     {
         $this->setConnectionId($connId);
         $this->setTableName($tableName, $tableAlias);
@@ -19,13 +19,13 @@ class Table
         $this->defineRelations();
     }
 
-    public function setConnectionId(int $connId)
+    public function setConnectionId(?int $connId)
     {
         $this->connectionId = $connId;
         return $this;
     }
 
-    public function getConnectionId(): int
+    public function getConnectionId(): ?int
     {
         return $this->connectionId;
     }

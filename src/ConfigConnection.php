@@ -5,7 +5,7 @@ namespace Bmodel;
 class ConfigConnection
 {
     public $dbname;
-    public $id = null;
+    public $id = 0;
     public $host = 'localhost';
     public $port = '3306';
     public $username = 'root';
