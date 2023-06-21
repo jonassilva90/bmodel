@@ -15,7 +15,7 @@ class Model extends Record
     {
         $this->setTableName($this->table, $this->tableAlias);
         $this->setPrimaryKey($this->primaryKey);
-        $this->setConnectionId(is_null($this->connectionId) ? 0 : $this->connectionId);
+        $this->setConnectionId($this->connectionId);
         parent::__construct();
     }
 
