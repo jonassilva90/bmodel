@@ -19,7 +19,7 @@ class ResultsQuery implements \IteratorAggregate
         string $tableName,
         $tableAlias = null,
         string $primaryKey = 'id',
-        int $connId = 0,
+        ?int $connId = null,
         string $querySql = ''
     ) {
         $this->querySql = $querySql;
