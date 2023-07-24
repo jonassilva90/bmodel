@@ -132,6 +132,28 @@ class Connection
         return self::$connections[$connId];
     }
 
+    public static function inTransaction($connId = null): bool
+    {
+        $connId = $connId ?? self::$connIdDefault;
+        if (!isset(self::$connections[$connId])) {
+            return false;
+        }
+        return self::$connections[$connId]->inTransaction();
+    }
+
+    public static function closeConnect($connId = null)
+    {
+        $connId = $connId ?? self::$connIdDefault;
+
+        if (isset(self::$connections[$connId])) {
+            $conn = self::$connections[$connId];
+            if ($conn->inTransaction()) {
+                $conn->rollBack();
+            }
+            unset(self::$connections[$connId]);
+        }
+    }
+
     public static function addModelPath($modelPath, $modelNamespace, $connId = null)
     {
         $modelPath = str_replace(['/','\\'], DIRECTORY_SEPARATOR, $modelPath);

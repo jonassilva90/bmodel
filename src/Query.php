@@ -9,6 +9,7 @@ class Query
     public static $printQuery = false;
     public static $queryString = '';
     public static $tables = [];
+    public static $attempt = 0;
     /**
      * Begin transaction
      *
@@ -62,47 +63,44 @@ class Query
      */
     public static function query($sql, $bindData = null, $connId = null, $reconnect = true)
     {
-        if (Query::$printQuery) {
-            echo "SQL: " . $sql . "<br />\r\n";
-            echo "<pre>" . json_encode($bindData, JSON_PRETTY_PRINT) . "</pre>";
-        }
-
-        $pdo = Connection::connect($connId);
-        if (is_null($bindData) || !is_array($bindData) || empty($bindData)) {
-            self::$queryString = $sql;
-            if (!$query = $pdo->query($sql)) {
-                list($handle, $codError, $StrError) = $pdo->errorInfo();
-
-                $codError = intval($codError);
-
-                if ($reconnect && $codError == 2006) {
-                    Connection::connect($connId, true);
-                    return self::query($sql, $bindData, $connId, false);
-                }
-
-                throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n" . $sql, $codError);
-                return false;
+        try {
+            if (Query::$printQuery) {
+                echo "SQL: " . $sql . "<br />\r\n";
+                echo "<pre>" . json_encode($bindData, JSON_PRETTY_PRINT) . "</pre>";
             }
-        } else {
-            $query = $pdo->prepare($sql);
-            if (!$query->execute($bindData)) {
-                list($handle, $codError, $StrError) = $query->errorInfo();
 
-                $codError = intval($codError);
+            $pdo = Connection::connect($connId);
+            if (is_null($bindData) || !is_array($bindData) || empty($bindData)) {
+                self::$queryString = $sql;
+                if (!$query = $pdo->query($sql)) {
+                    list($handle, $codError, $StrError) = $pdo->errorInfo();
+                    $codError = intval($codError);
+                    throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n" . $sql, $codError);
+                }
+            } else {
+                $query = $pdo->prepare($sql);
+                if (!$query->execute($bindData)) {
+                    list($handle, $codError, $StrError) = $query->errorInfo();
+
+                    $codError = intval($codError);
+                    self::$queryString = $query->queryString;
+                    throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n", $codError);
+                }
                 self::$queryString = $query->queryString;
-
-                if ($reconnect && $codError == 2006) {
-                    Connection::connect($connId, true);
+            }
+            self::$attempt = 0;
+            return $query;
+        } catch (\Throwable $th) {
+            if ($th->getCode() == 2006) { // Mysql has gone away
+                $inTransaction = Connection::inTransaction($connId);
+                $pdo           = Connection::closeConnect($connId);
+                if ($reconnect && !$inTransaction && self::$attempt < 1) {
+                    self::$attempt++;
                     return self::query($sql, $bindData, $connId, false);
                 }
-
-                throw new \Exception("Error: #{$codError}: {$StrError}<br />\r\n", $codError);
-                return false;
             }
-            self::$queryString = $query->queryString;
+            throw $th;
         }
-
-        return $query;
     }
 
     public static function isTable($table, $connId = null)
