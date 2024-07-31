@@ -6,6 +6,7 @@ class ConfigConnection
 {
     public $dbname;
     public $id = null;
+    public ?string $filename = null;
     public $host = 'localhost';
     public $port = '3306';
     public $username = 'root';
@@ -26,6 +27,10 @@ class ConfigConnection
 
         if (isset($data['host'])) {
             $this->host = $data['host'];
+        }
+
+        if (isset($data['filename'])) {
+            $this->filename = $data['filename'];
         }
 
         if (isset($data['port'])) {

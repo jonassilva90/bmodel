@@ -16,7 +16,7 @@ class Connection
      */
     public static function setConnection(ConfigConnection $config)
     {
-        $driversAllow = array('mysql');
+        $driversAllow = array('mysql', 'sqlite');
         if (!in_array($config->driver, $driversAllow)) {
             throw new \Exception("Driver Driver '{$config->driver}' not accepted.");
             return false;
@@ -100,6 +100,7 @@ class Connection
 
         $driver     = self::$cfgConnections[$connId]->driver;
         $host       = self::$cfgConnections[$connId]->host;
+        $filename   = self::$cfgConnections[$connId]->filename;
         $port       = self::$cfgConnections[$connId]->port;
         $dbname     = self::$cfgConnections[$connId]->dbname;
         $username   = self::$cfgConnections[$connId]->username;
@@ -110,22 +111,35 @@ class Connection
 
         $options = array();
         $options[\PDO::ATTR_PERSISTENT] = !!$persistent;
+        $dsn = "";
         if ($driver == "mysql") {
             //$options[\PDO::MYSQL_ATTR_INIT_COMMAND] = "SET NAMES 'UTF8'";
             $options[1002] = "SET NAMES '" . $charset . "'";
+            $dsn = "{$driver}:host={$host};port={$port};dbname={$dbname};charset=" . $charset . "";
+        } elseif ($driver == "sqlite") {
+            $dsn = "{$driver}:{$filename}";
         }
 
         try {
             self::$connections[$connId] = new \PDO(
-                "{$driver}:host={$host};port={$port};dbname={$dbname};charset=" . $charset . "",
+                $dsn,
                 $username,
                 $password,
                 $options
             );
-            self::$connections[$connId]->exec("SET time_zone = '" . $timeZone . "'");
+
+            if($driver == 'mysql') {
+                self::$connections[$connId]->exec("SET time_zone = '" . $timeZone . "'");
+            } elseif($driver == 'sqlite') {
+                if($charset=='UTF8') {
+                    $charset = 'UTF-8';
+                }
+                self::$connections[$connId]->exec("PRAGMA encoding = '".$charset."';");;
+            }
         } catch (\PDOException $e) {
+            $message = mb_convert_encoding($e->getMessage(), 'UTF-8');
             self::$connections[$connId] = null;
-            throw new \Exception("Connection failed: " . utf8_encode($e->getMessage()) . ".");
+            throw new \Exception("Connection failed: " . $message . ".");
             return false;
         }
 
